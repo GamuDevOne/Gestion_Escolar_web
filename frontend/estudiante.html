@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estudiante — Gestión Escolar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="css/estudiante.css">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo"><i class="fas fa-graduation-cap"></i> Mi Escuela</div>
+                <div class="user-info">
+                    <span class="user-avatar"><i class="fas fa-user-graduate"></i></span>
+                    <span id="studentName">Estudiante</span>
+                </div>
+            </div>
+            <nav class="nav-menu">
+                <button class="nav-btn active" data-view="dashboard"><i class="fas fa-chart-line"></i> <span> Dashboard</span></button>
+                <button class="nav-btn" data-view="grades"><i class="fas fa-book-open"></i> <span> Mis Notas</span></button>
+                <button class="nav-btn" data-view="comments"><i class="fas fa-comments"></i> <span> Comentarios</span></button>
+            </nav>
+            <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> <span> Cerrar sesión</span></button>
+        </aside>
+
+        <main class="main-content">
+            <!-- Dashboard -->
+            <div id="dashboardView" class="view active">
+                <h2 class="page-title"><i class="fas fa-chart-line"></i> Mi Dashboard</h2>
+                <div class="stats-grid">
+                    <div class="stat-card pink">
+                        <div class="stat-icon"><i class="fas fa-book"></i></div>
+                        <div>
+                            <div class="stat-number" id="mySubjectsCount">0</div>
+                            <div class="stat-label">Mis Materias</div>
+                        </div>
+                    </div>
+                    <div class="stat-card lavender">
+                        <div class="stat-icon"><i class="fas fa-chart-simple"></i></div>
+                        <div>
+                            <div class="stat-number" id="myAverage">0</div>
+                            <div class="stat-label">Promedio General</div>
+                        </div>
+                    </div>
+                    <div class="stat-card peach">
+                        <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                        <div>
+                            <div class="stat-number" id="approvedCount">0</div>
+                            <div class="stat-label">Materias Aprobadas</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="welcome-card">
+                    <h3><i class="fas fa-star"></i> Hola, <span id="welcomeName"></span></h3>
+                    <p>Sigue esforzándote, ¡cada día aprendes algo nuevo!</p>
+                </div>
+                
+                <div class="motivation-card">
+                    <p><i class="fas fa-star"></i> "El estudio es la llave que abre las puertas del conocimiento" <i class="fas fa-star"></i></p>
+                </div>
+            </div>
+
+            <!-- Mis Notas - Reporte por Trimestre mejorado -->
+            <div id="gradesView" class="view">
+                <h2 class="page-title"><i class="fas fa-book-open"></i> Reporte de Notas por Trimestre</h2>
+                
+                <div id="gradesReport" class="grades-report">
+                    <!-- Aquí se renderizará el reporte completo -->
+                </div>
+                
+                <div class="motivation-card">
+                    <i class="fas fa-heart" style="color: #ff99bb;"></i>
+                    <p>¡Cada nota es un paso más hacia tus metas! Sigue adelante.</p>
+                </div>
+            </div>
+
+            <!-- Comentarios -->
+            <div id="commentsView" class="view">
+                <h2 class="page-title"><i class="fas fa-comments"></i> Mis Comentarios</h2>
+                <div class="card">
+                    <div class="form-group">
+                        <label><i class="fas fa-book"></i> Materia</label>
+                        <select id="commentSubject"></select>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-pen"></i> Tu comentario</label>
+                        <textarea id="commentText" rows="4" placeholder="Escribe aquí tu comentario sobre la materia, la nota o el profesor..."></textarea>
+                    </div>
+                    <button class="btn-primary" onclick="sendComment()"><i class="fas fa-paper-plane"></i> Enviar Comentario</button>
+                </div>
+                
+                <h3 style="margin-top: 30px;"><i class="fas fa-history"></i> Mis Comentarios Enviados</h3>
+                <div id="myCommentsList" class="comments-list"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/estudiante.js"></script>
+</body>
+</html>

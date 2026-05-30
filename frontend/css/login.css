@@ -1,0 +1,286 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Cinzel:wght@400;600;700;900&family=EB+Garamond:wght@400;500;600&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --crimson:       #8B0000;
+    --crimson-deep:  #5C0000;
+    --crimson-light: #B22222;
+    --gold:          #C9A84C;
+    --gold-light:    #E2C97E;
+    --gold-pale:     #F5E6B8;
+    --ivory:         #FAF6EE;
+    --ivory-dark:    #F0E8D5;
+    --parchment:     #E8DEC6;
+    --ink:           #1A0A0A;
+    --shadow:        rgba(92, 0, 0, 0.25);
+}
+
+body {
+    font-family: 'EB Garamond', Georgia, serif;
+    min-height: 100vh;
+    background:
+        radial-gradient(ellipse at 20% 20%, rgba(139,0,0,0.18) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 80%, rgba(92,0,0,0.22) 0%, transparent 55%),
+        linear-gradient(160deg, #1A0A0A 0%, #3B0A0A 40%, #200505 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Fondo ornamental */
+body::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 40px,
+            rgba(201,168,76,0.04) 40px,
+            rgba(201,168,76,0.04) 41px
+        ),
+        repeating-linear-gradient(
+            -45deg,
+            transparent,
+            transparent 40px,
+            rgba(201,168,76,0.04) 40px,
+            rgba(201,168,76,0.04) 41px
+        );
+    pointer-events: none;
+}
+
+/* Detalles de esquinas */
+body::after {
+    content: '';
+    font-size: 120px;
+    color: rgba(201,168,76,0.06);
+    position: absolute;
+    top: -20px;
+    right: -20px;
+    pointer-events: none;
+}
+
+.login-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 30px 20px;
+    position: relative;
+    z-index: 1;
+}
+
+.login-card {
+    background: var(--ivory);
+    border-radius: 4px;
+    padding: 50px 44px;
+    width: 100%;
+    max-width: 460px;
+    position: relative;
+    border: 1px solid var(--gold);
+    box-shadow:
+        0 0 0 4px rgba(201,168,76,0.12),
+        0 0 0 8px rgba(139,0,0,0.08),
+        0 30px 80px rgba(0,0,0,0.6),
+        inset 0 1px 0 rgba(201,168,76,0.3);
+}
+
+/* Borde ornamental superior */
+.login-card::before {
+    content: '';
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    border: 1px solid rgba(201,168,76,0.25);
+    border-radius: 2px;
+    pointer-events: none;
+}
+
+/* Esquinas decorativas */
+.login-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--crimson-deep), var(--gold), var(--crimson), var(--gold), var(--crimson-deep));
+    border-radius: 4px 4px 0 0;
+}
+
+/* Suprime el ribbon anterior */
+.decorative-ribbon {
+    display: none;
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 36px;
+    position: relative;
+}
+
+.heart-icon {
+    font-size: 0;
+    margin-bottom: 8px;
+}
+
+.heart-icon::before {
+    content: '\f521'; font-family: 'Font Awesome 6 Free'; font-weight: 900;
+    font-size: 52px;
+    color: var(--crimson);
+    display: block;
+    animation: crownGlow 3s ease-in-out infinite;
+    filter: drop-shadow(0 2px 8px rgba(201,168,76,0.4));
+}
+
+@keyframes crownGlow {
+    0%, 100% { filter: drop-shadow(0 2px 8px rgba(201,168,76,0.3)); }
+    50%       { filter: drop-shadow(0 4px 16px rgba(201,168,76,0.7)); }
+}
+
+.login-header h1 {
+    font-family: 'Cinzel', serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--crimson-deep);
+    letter-spacing: 0.12em;
+    margin: 10px 0 6px;
+    text-transform: uppercase;
+}
+
+.login-header p {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    color: var(--gold);
+    font-size: 15px;
+    letter-spacing: 0.08em;
+}
+
+/* Separador ornamental */
+.login-header::after {
+    content: '— • —';
+    display: block;
+    color: var(--gold-light);
+    font-size: 14px;
+    margin-top: 14px;
+    letter-spacing: 0.2em;
+}
+
+.input-group {
+    margin-bottom: 22px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--crimson);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 14px 18px;
+    border: 1px solid var(--parchment);
+    border-bottom: 2px solid var(--crimson);
+    background: rgba(250,246,238,0.6);
+    font-family: 'EB Garamond', serif;
+    font-size: 15px;
+    color: var(--ink);
+    transition: all 0.3s ease;
+    outline: none;
+    border-radius: 2px;
+}
+
+.input-group input:focus {
+    border-bottom-color: var(--gold);
+    background: var(--ivory);
+    box-shadow: 0 2px 0 rgba(201,168,76,0.3);
+}
+
+.input-group input::placeholder {
+    color: #bfab8e;
+    font-style: italic;
+}
+
+.login-btn {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, var(--crimson-deep) 0%, var(--crimson) 50%, var(--crimson-deep) 100%);
+    border: 1px solid var(--gold);
+    border-radius: 2px;
+    color: var(--gold-pale);
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 12px;
+    box-shadow: 0 4px 15px rgba(92,0,0,0.4), inset 0 1px 0 rgba(201,168,76,0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.login-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(201,168,76,0.15), transparent);
+    transition: left 0.5s ease;
+}
+
+.login-btn:hover {
+    background: linear-gradient(135deg, var(--crimson) 0%, var(--crimson-light) 50%, var(--crimson) 100%);
+    box-shadow: 0 6px 25px rgba(92,0,0,0.5), inset 0 1px 0 rgba(201,168,76,0.3);
+    transform: translateY(-1px);
+}
+
+.login-btn:hover::before {
+    left: 100%;
+}
+
+.demo-hint {
+    text-align: center;
+    font-family: 'EB Garamond', serif;
+    font-size: 13px;
+    color: #8a7055;
+    margin-top: 24px;
+    padding: 14px 18px;
+    background: rgba(240,232,213,0.6);
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 2px;
+    line-height: 1.7;
+}
+
+.decorative-flowers {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 0;
+    color: transparent;
+}
+
+.decorative-flowers::before {
+    content: '\f005  \f005  \f005'; font-family: 'Font Awesome 6 Free'; font-weight: 900;
+    font-size: 14px;
+    color: var(--gold-light);
+    opacity: 0.6;
+    letter-spacing: 0.4em;
+    display: block;
+}

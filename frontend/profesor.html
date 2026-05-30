@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profesor — Gestión Escolar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="css/profesor.css">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo"><i class="fas fa-chalkboard-user"></i> Profesorado</div>
+                <div class="user-info">
+                    <span class="user-avatar"><i class="fas fa-chalkboard-user"></i></span>
+                    <span id="teacherName">Profesora</span>
+                </div>
+            </div>
+            <nav class="nav-menu">
+                <button class="nav-btn active" data-view="dashboard"><i class="fas fa-chart-line"></i> <span> Dashboard</span></button>
+                <button class="nav-btn" data-view="subjects"><i class="fas fa-book"></i> <span> Mis Materias</span></button>
+                <button class="nav-btn" data-view="grades"><i class="fas fa-edit"></i> <span> Gestionar Notas</span></button>
+                <button class="nav-btn" data-view="comments"><i class="fas fa-comments"></i> <span> Comentarios</span></button>
+            </nav>
+            <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> <span> Cerrar sesión</span></button>
+        </aside>
+
+        <main class="main-content">
+            <!-- Dashboard -->
+            <div id="dashboardView" class="view active">
+                <h2 class="page-title"><i class="fas fa-chart-line"></i> Mi Dashboard</h2>
+                <div class="stats-grid">
+                    <div class="stat-card pink">
+                        <div class="stat-icon"><i class="fas fa-book"></i></div>
+                        <div>
+                            <div class="stat-number" id="mySubjectsCount">0</div>
+                            <div class="stat-label">Mis Materias</div>
+                        </div>
+                    </div>
+                    <div class="stat-card lavender">
+                        <div class="stat-icon"><i class="fas fa-users"></i></div>
+                        <div>
+                            <div class="stat-number" id="myStudentsCount">0</div>
+                            <div class="stat-label">Mis Estudiantes</div>
+                        </div>
+                    </div>
+                    <div class="stat-card peach">
+                        <div class="stat-icon"><i class="fas fa-star"></i></div>
+                        <div>
+                            <div class="stat-number" id="myGradesCount">0</div>
+                            <div class="stat-label">Notas Registradas</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="welcome-card">
+                    <h3><i class="fas fa-star"></i> Bienvenida, <span id="welcomeName"></span></h3>
+                    <p><i class="fas fa-heart"></i> Hoy es un día maravilloso para enseñar y aprender <i class="fas fa-heart"></i></p>
+                </div>
+            </div>
+
+            <!-- Mis Materias -->
+            <div id="subjectsView" class="view">
+                <h2 class="page-title"><i class="fas fa-book"></i> Mis Materias</h2>
+                <div id="subjectsList" class="subjects-grid"></div>
+            </div>
+
+            <!-- Gestionar Notas -->
+            <div id="gradesView" class="view">
+                <h2 class="page-title"><i class="fas fa-edit"></i> Gestionar Notas</h2>
+                
+                <div class="grades-panel">
+                    <div class="filter-bar">
+                        <div class="form-group" style="flex:2">
+                            <label><i class="fas fa-book-open"></i> Seleccionar Materia</label>
+                            <select id="gradeSubject" onchange="changeSubject()">
+                                <option value="">-- Seleccionar una materia --</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="quickStats" class="quick-stats" style="display: none;">
+                    <div class="quick-stat">
+                        <div class="number" id="statTotalStudents">0</div>
+                        <div class="label">Total Estudiantes</div>
+                    </div>
+                    <div class="quick-stat">
+                        <div class="number" id="statAvgGrade">0</div>
+                        <div class="label">Promedio Grupo</div>
+                    </div>
+                    <div class="quick-stat">
+                        <div class="number" id="statApproved">0</div>
+                        <div class="label">Aprobados</div>
+                    </div>
+                    <div class="quick-stat">
+                        <div class="number" id="statFailed">0</div>
+                        <div class="label">En Proceso</div>
+                    </div>
+                </div>
+
+                <div id="studentsByGrade" class="students-by-grade"></div>
+            </div>
+
+            <!-- Comentarios -->
+            <div id="commentsView" class="view">
+                <h2 class="page-title"><i class="fas fa-comments"></i> Comentarios de Estudiantes</h2>
+                <div id="commentsList" class="comments-list"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal de Registro Detallado de Notas por Estudiante -->
+    <div id="studentGradesModal" class="modal student-modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeStudentModal()">&times;</span>
+            <div id="studentModalContent"></div>
+        </div>
+    </div>
+
+    <script src="js/profesor.js"></script>
+</body>
+</html>
