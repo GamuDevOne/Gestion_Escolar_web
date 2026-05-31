@@ -18,15 +18,15 @@ document.getElementById('loginForm').addEventListener('submit', async function (
             return;
         }
 
-        // Guardar sesión en localStorage
+        // Guardar sesión con token incluido
         localStorage.setItem('currentUser', JSON.stringify({
             email,
-            rol:          data.rol,
-            nombre:       data.nombre,
-            id_referencia: data.id_referencia  // teacherId o studentId según el rol
+            token:         data.token,
+            rol:           data.rol,
+            nombre:        data.nombre,
+            id_referencia: data.id_referencia
         }));
 
-        // Redirigir según rol
         const routes = {
             admin:      'admin.html',
             profesor:   'profesor.html',

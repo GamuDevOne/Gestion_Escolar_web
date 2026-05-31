@@ -1,27 +1,17 @@
 <?php
 require '../config/db.php';
+require '../config/auth_middleware.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
-// ==================== GET - Traer todas las materias ====================
 if ($method === 'GET') {
-    // Hacemos JOIN con profesor para devolver el nombre directamente
-    $stmt = $pdo->query("
-        SELECT 
-            m.id,
-            m.nombre AS name,
-            m.codigo AS code,
-            m.creditos AS credits,
-            m.profesor_id AS teacherId
-        FROM materia m
-        ORDER BY m.nombre ASC
-    ");
-    $materias = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    echo json_encode($materias);
+    requireRole($pdo, ['admin', 'profesor', 'estudiante']);
+    $stmt = $pdo->query("SELECT m.id, m.nombre AS name, m.codigo AS code, m.creditos AS credits, m.profesor_id AS teacherId FROM materia m ORDER BY m.nombre ASC");
+    echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
 }
 
-// ==================== POST - Crear nueva materia ====================
 elseif ($method === 'POST') {
+    requireRole($pdo, 'admin');
     $data = json_decode(file_get_contents("php://input"), true);
 
     if (empty($data['name']) || empty($data['code'])) {
@@ -30,7 +20,6 @@ elseif ($method === 'POST') {
         exit;
     }
 
-    // Verificar código duplicado
     $check = $pdo->prepare("SELECT id FROM materia WHERE codigo = ?");
     $check->execute([$data['code']]);
     if ($check->fetch()) {
@@ -39,27 +28,15 @@ elseif ($method === 'POST') {
         exit;
     }
 
-    $stmt = $pdo->prepare("
-        INSERT INTO materia (nombre, codigo, creditos, profesor_id)
-        VALUES (?, ?, ?, ?)
-    ");
-    $stmt->execute([
-        $data['name'],                          // convertir name → nombre
-        $data['code'],                          // convertir code → codigo
-        $data['credits']    ?? 3,               // convertir credits → creditos
-        $data['teacherId'] ?? null              // convertir teacherId → profesor_id
-    ]);
+    $stmt = $pdo->prepare("INSERT INTO materia (nombre, codigo, creditos, profesor_id) VALUES (?, ?, ?, ?)");
+    $stmt->execute([$data['name'], $data['code'], $data['credits'] ?? 3, $data['teacherId'] ?? null]);
 
     http_response_code(201);
-    echo json_encode([
-        "success" => true,
-        "id"      => $pdo->lastInsertId(),
-        "message" => "Materia creada correctamente"
-    ]);
+    echo json_encode(["success" => true, "id" => $pdo->lastInsertId()]);
 }
 
-// ==================== PUT - Editar materia ====================
 elseif ($method === 'PUT') {
+    requireRole($pdo, 'admin');
     $data = json_decode(file_get_contents("php://input"), true);
 
     if (empty($data['id'])) {
@@ -68,29 +45,16 @@ elseif ($method === 'PUT') {
         exit;
     }
 
-    // Verificar código duplicado excluyendo la propia materia
-    $check = $pdo->prepare("
-        SELECT id FROM materia WHERE codigo = ? AND id != ?
-    ");
+    $check = $pdo->prepare("SELECT id FROM materia WHERE codigo = ? AND id != ?");
     $check->execute([$data['code'], $data['id']]);
     if ($check->fetch()) {
         http_response_code(409);
-        echo json_encode(["error" => "Ese código ya está en uso por otra materia"]);
+        echo json_encode(["error" => "Ese código ya está en uso"]);
         exit;
     }
 
-    $stmt = $pdo->prepare("
-        UPDATE materia
-        SET nombre = ?, codigo = ?, creditos = ?, profesor_id = ?
-        WHERE id = ?
-    ");
-    $stmt->execute([
-        $data['name'],                          // convertir name → nombre
-        $data['code'],                          // convertir code → codigo
-        $data['credits']    ?? 3,               // convertir credits → creditos
-        $data['teacherId'] ?? null,             // convertir teacherId → profesor_id
-        $data['id']
-    ]);
+    $pdo->prepare("UPDATE materia SET nombre=?, codigo=?, creditos=?, profesor_id=? WHERE id=?")
+        ->execute([$data['name'], $data['code'], $data['credits'] ?? 3, $data['teacherId'] ?? null, $data['id']]);
 
     echo json_encode(["success" => true, "message" => "Materia actualizada"]);
 }

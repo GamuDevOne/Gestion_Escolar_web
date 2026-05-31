@@ -1,26 +1,17 @@
 <?php
 require '../config/db.php';
+require '../config/auth_middleware.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
-// ==================== GET - Traer todos los profesores ====================
 if ($method === 'GET') {
-    $stmt = $pdo->query("
-        SELECT 
-            id,
-            nombre AS name,
-            email,
-            identificacion,
-            especialidad AS specialty
-        FROM profesor 
-        ORDER BY nombre ASC
-    ");
-    $profesores = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    echo json_encode($profesores);
+    requireRole($pdo, 'admin');
+    $stmt = $pdo->query("SELECT id, nombre AS name, email, identificacion, especialidad AS specialty FROM profesor ORDER BY nombre ASC");
+    echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
 }
 
-// ==================== POST - Crear nuevo profesor ====================
 elseif ($method === 'POST') {
+    requireRole($pdo, 'admin');
     $data = json_decode(file_get_contents("php://input"), true);
 
     if (empty($data['name']) || empty($data['email']) || empty($data['identificacion'])) {
@@ -29,7 +20,6 @@ elseif ($method === 'POST') {
         exit;
     }
 
-    // Verificar duplicado
     $check = $pdo->prepare("SELECT id FROM profesor WHERE identificacion = ? OR email = ?");
     $check->execute([$data['identificacion'], $data['email']]);
     if ($check->fetch()) {
@@ -38,48 +28,25 @@ elseif ($method === 'POST') {
         exit;
     }
 
-    // Insertar profesor
-    $stmt = $pdo->prepare("
-        INSERT INTO profesor (nombre, email, identificacion, especialidad)
-        VALUES (?, ?, ?, ?)
-    ");
-    $stmt->execute([
-        $data['name'],                          // convertir name → nombre
-        $data['email'],
-        $data['identificacion'],
-        $data['specialty'] ?? null              // convertir specialty → especialidad
-    ]);
+    $stmt = $pdo->prepare("INSERT INTO profesor (nombre, email, identificacion, especialidad) VALUES (?, ?, ?, ?)");
+    $stmt->execute([$data['name'], $data['email'], $data['identificacion'], $data['specialty'] ?? null]);
     $profesorId = $pdo->lastInsertId();
 
-    // Crear usuario con credenciales automáticas (RF2, con el hash))
-    // Contraseña inicial = su número de identificación
-    $passwordHash = hash('sha256', $data['identificacion']);
+    // Crear usuario con bcrypt (ya no SHA256)
+    $passwordHash = password_hash($data['identificacion'], PASSWORD_BCRYPT, ['cost' => 12]);
     $userCheck = $pdo->prepare("SELECT id FROM usuario WHERE email = ?");
     $userCheck->execute([$data['email']]);
-
     if (!$userCheck->fetch()) {
-        $userStmt = $pdo->prepare("
-            INSERT INTO usuario (email, password_hash, rol, nombre, id_referencia)
-            VALUES (?, ?, 'profesor', ?, ?)
-        ");
-        $userStmt->execute([
-            $data['email'],
-            $passwordHash,
-            $data['name'],
-            $profesorId
-        ]);
+        $pdo->prepare("INSERT INTO usuario (email, password_hash, rol, nombre, id_referencia) VALUES (?, ?, 'profesor', ?, ?)")
+            ->execute([$data['email'], $passwordHash, $data['name'], $profesorId]);
     }
 
     http_response_code(201);
-    echo json_encode([
-        "success"  => true,
-        "id"       => $profesorId,
-        "message"  => "Profesor creado. Credenciales: email = {$data['email']} / contraseña = {$data['identificacion']}"
-    ]);
+    echo json_encode(["success" => true, "id" => $profesorId, "message" => "Profesor creado. Contraseña inicial: {$data['identificacion']}"]);
 }
 
-// ==================== PUT - Editar profesor ====================
 elseif ($method === 'PUT') {
+    requireRole($pdo, 'admin');
     $data = json_decode(file_get_contents("php://input"), true);
 
     if (empty($data['id'])) {
@@ -88,37 +55,19 @@ elseif ($method === 'PUT') {
         exit;
     }
 
-    // Verificar duplicado excluyendo al propio profesor
-    $check = $pdo->prepare("
-        SELECT id FROM profesor 
-        WHERE (identificacion = ? OR email = ?) AND id != ?
-    ");
+    $check = $pdo->prepare("SELECT id FROM profesor WHERE (identificacion = ? OR email = ?) AND id != ?");
     $check->execute([$data['identificacion'], $data['email'], $data['id']]);
     if ($check->fetch()) {
         http_response_code(409);
-        echo json_encode(["error" => "Ese email o identificación ya está en uso por otro profesor"]);
+        echo json_encode(["error" => "Ese email o identificación ya está en uso"]);
         exit;
     }
 
-    $stmt = $pdo->prepare("
-        UPDATE profesor 
-        SET nombre = ?, email = ?, identificacion = ?, especialidad = ?
-        WHERE id = ?
-    ");
-    $stmt->execute([
-        $data['name'],                          // convertir name → nombre
-        $data['email'],
-        $data['identificacion'],
-        $data['specialty'] ?? null,             // convertir specialty → especialidad
-        $data['id']
-    ]);
+    $pdo->prepare("UPDATE profesor SET nombre=?, email=?, identificacion=?, especialidad=? WHERE id=?")
+        ->execute([$data['name'], $data['email'], $data['identificacion'], $data['specialty'] ?? null, $data['id']]);
 
-    // Sincronizar email y nombre en la tabla usuario también
-    $userStmt = $pdo->prepare("
-        UPDATE usuario SET email = ?, nombre = ?
-        WHERE id_referencia = ? AND rol = 'profesor'
-    ");
-    $userStmt->execute([$data['email'], $data['name'], $data['id']]);
+    $pdo->prepare("UPDATE usuario SET email=?, nombre=? WHERE id_referencia=? AND rol='profesor'")
+        ->execute([$data['email'], $data['name'], $data['id']]);
 
     echo json_encode(["success" => true, "message" => "Profesor actualizado"]);
 }

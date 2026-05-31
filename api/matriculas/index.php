@@ -1,34 +1,45 @@
 <?php
 require '../config/db.php';
+require '../config/auth_middleware.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
-// ==================== GET - Traer todas las matrículas ====================
 if ($method === 'GET') {
-    // JOIN con las tres tablas para devolver nombres directamente
-    $stmt = $pdo->query("
-        SELECT 
-            m.id,
-            m.estudiante_id AS studentId,
-            m.materia_id AS subjectId,
-            m.fecha_asignacion AS enrollmentDate,
-            e.nombre  AS studentName,
-            e.grado   AS studentGrade,
-            s.nombre  AS subjectName,
-            s.codigo  AS subjectCode,
-            p.nombre  AS teacherName
+    requireRole($pdo, ['admin', 'profesor', 'estudiante']);
+
+    $where  = [];
+    $params = [];
+
+    // Restricción automática por rol
+    if ($authUser['rol'] === 'estudiante') {
+        $where[]  = "m.estudiante_id = ?";
+        $params[] = $authUser['id_referencia'];
+    } elseif ($authUser['rol'] === 'profesor') {
+        $where[]  = "s.profesor_id = ?";
+        $params[] = $authUser['id_referencia'];
+    }
+
+    $whereSQL = count($where) > 0 ? "WHERE " . implode(" AND ", $where) : "";
+
+    $stmt = $pdo->prepare("
+        SELECT m.id, m.estudiante_id AS studentId, m.materia_id AS subjectId,
+               m.fecha_asignacion AS enrollmentDate,
+               e.nombre AS studentName, e.grado AS studentGrade,
+               s.nombre AS subjectName, s.codigo AS subjectCode,
+               p.nombre AS teacherName
         FROM matricula m
         JOIN estudiante e ON m.estudiante_id = e.id
         JOIN materia    s ON m.materia_id    = s.id
         LEFT JOIN profesor p ON s.profesor_id = p.id
+        $whereSQL
         ORDER BY e.nombre ASC
     ");
-    $matriculas = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    echo json_encode($matriculas);
+    $stmt->execute($params);
+    echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
 }
 
-// ==================== POST - Crear matrícula ====================
 elseif ($method === 'POST') {
+    requireRole($pdo, 'admin');
     $data = json_decode(file_get_contents("php://input"), true);
 
     if (empty($data['studentId']) || empty($data['subjectId'])) {
@@ -37,7 +48,6 @@ elseif ($method === 'POST') {
         exit;
     }
 
-    // Verificar que el estudiante existe
     $checkEst = $pdo->prepare("SELECT id FROM estudiante WHERE id = ?");
     $checkEst->execute([$data['studentId']]);
     if (!$checkEst->fetch()) {
@@ -46,7 +56,6 @@ elseif ($method === 'POST') {
         exit;
     }
 
-    // Verificar que la materia existe
     $checkMat = $pdo->prepare("SELECT id FROM materia WHERE id = ?");
     $checkMat->execute([$data['subjectId']]);
     if (!$checkMat->fetch()) {
@@ -55,11 +64,7 @@ elseif ($method === 'POST') {
         exit;
     }
 
-    // Verificar matrícula duplicada
-    $check = $pdo->prepare("
-        SELECT id FROM matricula 
-        WHERE estudiante_id = ? AND materia_id = ?
-    ");
+    $check = $pdo->prepare("SELECT id FROM matricula WHERE estudiante_id = ? AND materia_id = ?");
     $check->execute([$data['studentId'], $data['subjectId']]);
     if ($check->fetch()) {
         http_response_code(409);
@@ -67,25 +72,15 @@ elseif ($method === 'POST') {
         exit;
     }
 
-    $stmt = $pdo->prepare("
-        INSERT INTO matricula (estudiante_id, materia_id, fecha_asignacion)
-        VALUES (?, ?, CURDATE())
-    ");
-    $stmt->execute([
-        $data['studentId'],
-        $data['subjectId']
-    ]);
+    $pdo->prepare("INSERT INTO matricula (estudiante_id, materia_id, fecha_asignacion) VALUES (?, ?, CURDATE())")
+        ->execute([$data['studentId'], $data['subjectId']]);
 
     http_response_code(201);
-    echo json_encode([
-        "success" => true,
-        "id"      => $pdo->lastInsertId(),
-        "message" => "Matrícula creada correctamente"
-    ]);
+    echo json_encode(["success" => true, "id" => $pdo->lastInsertId()]);
 }
 
-// ==================== DELETE - Eliminar matrícula ====================
 elseif ($method === 'DELETE') {
+    requireRole($pdo, 'admin');
     $data = json_decode(file_get_contents("php://input"), true);
     $id   = $data['id'] ?? null;
 
@@ -95,7 +90,6 @@ elseif ($method === 'DELETE') {
         exit;
     }
 
-    // Verificar que la matrícula existe
     $check = $pdo->prepare("SELECT id FROM matricula WHERE id = ?");
     $check->execute([$id]);
     if (!$check->fetch()) {
@@ -105,7 +99,6 @@ elseif ($method === 'DELETE') {
     }
 
     $pdo->prepare("DELETE FROM matricula WHERE id = ?")->execute([$id]);
-
     echo json_encode(["success" => true, "message" => "Matrícula eliminada"]);
 }
 ?>
