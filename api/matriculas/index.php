@@ -22,18 +22,18 @@ if ($method === 'GET') {
     $whereSQL = count($where) > 0 ? "WHERE " . implode(" AND ", $where) : "";
 
     $stmt = $pdo->prepare("
-        SELECT m.id, m.estudiante_id AS studentId, m.materia_id AS subjectId,
-               m.fecha_asignacion AS enrollmentDate,
-               e.nombre AS studentName, e.grado AS studentGrade,
-               s.nombre AS subjectName, s.codigo AS subjectCode,
-               p.nombre AS teacherName
-        FROM matricula m
-        JOIN estudiante e ON m.estudiante_id = e.id
-        JOIN materia    s ON m.materia_id    = s.id
-        LEFT JOIN profesor p ON s.profesor_id = p.id
-        $whereSQL
-        ORDER BY e.nombre ASC
-    ");
+    SELECT m.id, m.estudiante_id AS studentId, m.materia_id AS subjectId,
+           m.fecha_asignacion AS enrollmentDate,
+           e.nombre AS studentName, e.grado AS studentGrade, e.email AS studentEmail,
+           s.nombre AS subjectName, s.codigo AS subjectCode,
+           p.nombre AS teacherName
+    FROM matricula m
+    JOIN estudiante e ON m.estudiante_id = e.id
+    JOIN materia    s ON m.materia_id    = s.id
+    LEFT JOIN profesor p ON s.profesor_id = p.id
+    $whereSQL
+    ORDER BY e.nombre ASC
+");
     $stmt->execute($params);
     echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
 }

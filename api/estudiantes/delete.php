@@ -21,6 +21,10 @@ if ($checkNotas->fetch()) {
 }
 
 $pdo->prepare("DELETE FROM matricula WHERE estudiante_id = ?")->execute([$id]);
+
+// Eliminar su cuenta de acceso
+$pdo->prepare("DELETE FROM usuario WHERE id_referencia = ? AND rol = 'estudiante'")->execute([$id]);
+
 $pdo->prepare("DELETE FROM estudiante WHERE id = ?")->execute([$id]);
 
 echo json_encode(["success" => true, "message" => "Estudiante eliminado"]);

@@ -143,11 +143,26 @@
         </div>
     </div>
 
-    <div id="subjectModal" class="modal"><div class="modal-content"><button type="button" class="close" onclick="closeModal('subjectModal')" aria-label="Cerrar" title="Cerrar">&times;</button><h3><i class="fas fa-book"></i> Materia</h3><form id="subjectForm"><input type="hidden" id="subjectId"><div class="form-group"><label for="subjectCode">Código</label><input id="subjectCode" placeholder="Ej: MAT101" required></div><div class="form-group"><label for="subjectName">Nombre</label><input id="subjectName" placeholder="Ej: Matemáticas 1" required></div><div class="form-group"><label for="subjectCredits">Créditos</label><input type="number" id="subjectCredits" value="3" placeholder="3" title="Número de créditos"></div><div class="form-group"><label for="subjectTeacher">Profesor</label><select id="subjectTeacher" title="Selecciona un profesor"><option value="">-- Ninguno --</option></select></div><button type="submit" class="btn-primary">Guardar</button></form></div></div>
+    <div id="subjectModal" class="modal"><div class="modal-content">
+        <button type="button" class="close" onclick="closeModal('subjectModal')" aria-label="Cerrar" title="Cerrar">&times;</button>
+        <h3>
+            <i class="fas fa-book"></i> Materia</h3>
+            <form id="subjectForm"><input type="hidden" id="subjectId"><div class="form-group">
+                <label for="subjectCode">Código</label>
+                <input id="subjectCode" placeholder="Ej: MAT101" required></div>
+                <div class="form-group"><label for="subjectName">Nombre</label>
+                    <input id="subjectName" placeholder="Ej: Matemáticas 1" required></div>
+                    <div class="form-group"><label for="subjectCredits">Créditos</label>
+                        <input type="number" id="subjectCredits" value="3" placeholder="3" title="Número de créditos"></div>
+                        <div class="form-group"><label for="subjectTeacher">Profesor</label><select id="subjectTeacher" title="Selecciona un profesor"><option value="">-- Ninguno --</option>
+                        </select></div><button type="submit" class="btn-primary">Guardar</button></form></div></div>
 
-    <div id="enrollmentModal" class="modal"><div class="modal-content"><span class="close" onclick="closeModal('enrollmentModal')">&times;</span><h3><i class="fas fa-clipboard-list"></i> Asignar Materia</h3><form id="enrollmentForm"><div class="form-group"><label for="enrollmentStudent">Estudiante</label><select id="enrollmentStudent" title="Seleccione un estudiante"></select></div><div class="form-group"><label for="enrollmentSubject">Materia</label><select id="enrollmentSubject" title="Seleccione una materia"></select></div><button type="submit" class="btn-primary">Asignar</button></form></div></div>
+    <div id="enrollmentModal" class="modal"><div class="modal-content"><span class="close" onclick="closeModal('enrollmentModal')">&times;</span>
+        <h3><i class="fas fa-clipboard-list"></i> Asignar Materia</h3><form id="enrollmentForm"><div class="form-group"><label for="enrollmentStudent">Estudiante</label><select id="enrollmentStudent" title="Seleccione un estudiante"></select></div><div class="form-group"><label for="enrollmentSubject">Materia</label><select id="enrollmentSubject" title="Seleccione una materia"></select></div><button type="submit" class="btn-primary">Asignar</button></form></div></div>
     
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="js/api.js"></script>
     <script src="js/admin.js"></script>
+
 </body>
 </html>

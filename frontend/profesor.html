@@ -75,8 +75,8 @@
                 <div class="grades-panel">
                     <div class="filter-bar">
                         <div class="form-group" style="flex:2">
-                            <label><i class="fas fa-book-open"></i> Seleccionar Materia</label>
-                            <select id="gradeSubject" onchange="changeSubject()">
+                            <label for="gradeSubject"><i class="fas fa-book-open"></i> Seleccionar Materia</label>
+                            <select id="gradeSubject" title="Seleccionar materia" onchange="changeSubject()">
                                 <option value="">-- Seleccionar una materia --</option>
                             </select>
                         </div>
@@ -120,7 +120,8 @@
             <div id="studentModalContent"></div>
         </div>
     </div>
-
+    
+    <script src="js/api.js"></script>
     <script src="js/profesor.js"></script>
 </body>
 </html>
