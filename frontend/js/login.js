@@ -11,14 +11,16 @@ document.getElementById('loginForm').addEventListener('submit', async function (
             body:    JSON.stringify({ email, password })
         });
 
-        const data = await response.json();
+        const json = await response.json();
 
         if (!response.ok) {
-            alert(data.error || 'Credenciales incorrectas');
+            alert(json.error || 'Credenciales incorrectas');
             return;
         }
 
-        // Guardar sesión con token incluido
+        // Login ahora devuelve { success, data: { token, rol, nombre, id_referencia } }
+        const data = json.data;
+
         localStorage.setItem('currentUser', JSON.stringify({
             email,
             token:         data.token,
@@ -27,11 +29,7 @@ document.getElementById('loginForm').addEventListener('submit', async function (
             id_referencia: data.id_referencia
         }));
 
-        const routes = {
-            admin:      'admin.html',
-            profesor:   'profesor.html',
-            estudiante: 'estudiante.html'
-        };
+        const routes = { admin: 'admin.html', profesor: 'profesor.html', estudiante: 'estudiante.html' };
         window.location.href = routes[data.rol];
 
     } catch (err) {

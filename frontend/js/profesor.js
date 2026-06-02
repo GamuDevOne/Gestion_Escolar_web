@@ -62,10 +62,15 @@ async function loadData() {
         if (!gradesRes.ok)      throw new Error('Error cargando notas');
         if (!commentsRes.ok)    throw new Error('Error cargando comentarios');
 
-        const allSubjects    = await subjectsRes.json();
-        const allEnrollments = await enrollmentsRes.json();
-        const allGrades      = await gradesRes.json();
-        myComments           = await commentsRes.json();
+        const subjectsJson    = await subjectsRes.json();
+        const enrollmentsJson = await enrollmentsRes.json();
+        const gradesJson      = await gradesRes.json();
+        const commentsJson    = await commentsRes.json();
+
+        const allSubjects    = subjectsJson.data    ?? subjectsJson;
+        const allEnrollments = enrollmentsJson.data ?? enrollmentsJson;
+        const allGrades      = gradesJson.data      ?? gradesJson;
+        myComments           = commentsJson.data    ?? commentsJson;
 
         // El servidor ya filtra matrículas y notas por profesor.
         // Materias: filtrar client-side las propias.

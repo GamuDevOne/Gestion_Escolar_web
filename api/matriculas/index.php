@@ -10,7 +10,6 @@ if ($method === 'GET') {
     $where  = [];
     $params = [];
 
-    // Restricción automática por rol
     if ($authUser['rol'] === 'estudiante') {
         $where[]  = "m.estudiante_id = ?";
         $params[] = $authUser['id_referencia'];
@@ -19,64 +18,94 @@ if ($method === 'GET') {
         $params[] = $authUser['id_referencia'];
     }
 
+    // Búsqueda y paginación solo para admin
+    if ($authUser['rol'] === 'admin') {
+        $search = trim($_GET['search'] ?? '');
+        if ($search !== '') {
+            $where[]  = "(e.nombre LIKE ? OR s.nombre LIKE ?)";
+            $params[] = "%$search%";
+            $params[] = "%$search%";
+        }
+    }
+
     $whereSQL = count($where) > 0 ? "WHERE " . implode(" AND ", $where) : "";
 
+    $baseQuery = "
+        FROM matricula m
+        JOIN estudiante e ON m.estudiante_id = e.id
+        JOIN materia    s ON m.materia_id    = s.id
+        LEFT JOIN profesor p ON s.profesor_id = p.id
+        $whereSQL
+    ";
+
+    // Profesor y estudiante reciben todo sin paginar
+    if ($authUser['rol'] !== 'admin') {
+        $stmt = $pdo->prepare("
+            SELECT m.id, m.estudiante_id AS studentId, m.materia_id AS subjectId,
+                   m.fecha_asignacion AS enrollmentDate,
+                   e.nombre AS studentName, e.grado AS studentGrade, e.email AS studentEmail,
+                   s.nombre AS subjectName, s.codigo AS subjectCode,
+                   p.nombre AS teacherName
+            $baseQuery
+            ORDER BY e.nombre ASC
+        ");
+        $stmt->execute($params);
+        sendSuccess($stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+
+    $page    = max(1, intval($_GET['page']     ?? 1));
+    $perPage = max(1, min(100, intval($_GET['per_page'] ?? 10)));
+    $offset  = ($page - 1) * $perPage;
+
+    $countStmt = $pdo->prepare("SELECT COUNT(*) $baseQuery");
+    $countStmt->execute($params);
+    $total = (int) $countStmt->fetchColumn();
+
+    $params[] = $perPage;
+    $params[] = $offset;
+
     $stmt = $pdo->prepare("
-    SELECT m.id, m.estudiante_id AS studentId, m.materia_id AS subjectId,
-           m.fecha_asignacion AS enrollmentDate,
-           e.nombre AS studentName, e.grado AS studentGrade, e.email AS studentEmail,
-           s.nombre AS subjectName, s.codigo AS subjectCode,
-           p.nombre AS teacherName
-    FROM matricula m
-    JOIN estudiante e ON m.estudiante_id = e.id
-    JOIN materia    s ON m.materia_id    = s.id
-    LEFT JOIN profesor p ON s.profesor_id = p.id
-    $whereSQL
-    ORDER BY e.nombre ASC
-");
+        SELECT m.id, m.estudiante_id AS studentId, m.materia_id AS subjectId,
+               m.fecha_asignacion AS enrollmentDate,
+               e.nombre AS studentName, e.grado AS studentGrade, e.email AS studentEmail,
+               s.nombre AS subjectName, s.codigo AS subjectCode,
+               p.nombre AS teacherName
+        $baseQuery
+        ORDER BY e.nombre ASC
+        LIMIT ? OFFSET ?
+    ");
     $stmt->execute($params);
-    echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+
+    sendSuccess([
+        "items"       => $stmt->fetchAll(PDO::FETCH_ASSOC),
+        "total"       => $total,
+        "page"        => $page,
+        "per_page"    => $perPage,
+        "total_pages" => (int) ceil($total / $perPage)
+    ]);
 }
 
 elseif ($method === 'POST') {
     requireRole($pdo, 'admin');
     $data = json_decode(file_get_contents("php://input"), true);
-
-    if (empty($data['studentId']) || empty($data['subjectId'])) {
-        http_response_code(400);
-        echo json_encode(["error" => "studentId y subjectId son obligatorios"]);
-        exit;
-    }
+    validateRequired($data, ['studentId', 'subjectId']);
 
     $checkEst = $pdo->prepare("SELECT id FROM estudiante WHERE id = ?");
     $checkEst->execute([$data['studentId']]);
-    if (!$checkEst->fetch()) {
-        http_response_code(404);
-        echo json_encode(["error" => "El estudiante no existe"]);
-        exit;
-    }
+    if (!$checkEst->fetch()) sendError("El estudiante no existe", 404);
 
     $checkMat = $pdo->prepare("SELECT id FROM materia WHERE id = ?");
     $checkMat->execute([$data['subjectId']]);
-    if (!$checkMat->fetch()) {
-        http_response_code(404);
-        echo json_encode(["error" => "La materia no existe"]);
-        exit;
-    }
+    if (!$checkMat->fetch()) sendError("La materia no existe", 404);
 
     $check = $pdo->prepare("SELECT id FROM matricula WHERE estudiante_id = ? AND materia_id = ?");
     $check->execute([$data['studentId'], $data['subjectId']]);
-    if ($check->fetch()) {
-        http_response_code(409);
-        echo json_encode(["error" => "Este estudiante ya está matriculado en esta materia"]);
-        exit;
-    }
+    if ($check->fetch()) sendError("Este estudiante ya está matriculado en esta materia", 409);
 
     $pdo->prepare("INSERT INTO matricula (estudiante_id, materia_id, fecha_asignacion) VALUES (?, ?, CURDATE())")
         ->execute([$data['studentId'], $data['subjectId']]);
 
-    http_response_code(201);
-    echo json_encode(["success" => true, "id" => $pdo->lastInsertId()]);
+    sendCreated(["id" => $pdo->lastInsertId()]);
 }
 
 elseif ($method === 'DELETE') {
@@ -84,21 +113,17 @@ elseif ($method === 'DELETE') {
     $data = json_decode(file_get_contents("php://input"), true);
     $id   = $data['id'] ?? null;
 
-    if (!$id) {
-        http_response_code(400);
-        echo json_encode(["error" => "ID requerido"]);
-        exit;
-    }
+    if (!$id) sendError("ID requerido", 400);
 
     $check = $pdo->prepare("SELECT id FROM matricula WHERE id = ?");
     $check->execute([$id]);
-    if (!$check->fetch()) {
-        http_response_code(404);
-        echo json_encode(["error" => "Matrícula no encontrada"]);
-        exit;
-    }
+    if (!$check->fetch()) sendError("Matrícula no encontrada", 404);
 
     $pdo->prepare("DELETE FROM matricula WHERE id = ?")->execute([$id]);
-    echo json_encode(["success" => true, "message" => "Matrícula eliminada"]);
+    sendSuccess(["message" => "Matrícula eliminada"]);
+}
+
+else {
+    sendError("Método no permitido", 405);
 }
 ?>

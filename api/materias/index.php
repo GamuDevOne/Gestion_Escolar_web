@@ -6,56 +6,92 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
     requireRole($pdo, ['admin', 'profesor', 'estudiante']);
-    $stmt = $pdo->query("SELECT m.id, m.nombre AS name, m.codigo AS code, m.creditos AS credits, m.profesor_id AS teacherId FROM materia m ORDER BY m.nombre ASC");
-    echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+
+    // Profesor y estudiante reciben todas las materias sin paginar
+    if ($authUser['rol'] !== 'admin') {
+        $stmt = $pdo->query("
+            SELECT id, nombre AS name, codigo AS code, creditos AS credits, profesor_id AS teacherId
+            FROM materia ORDER BY nombre ASC
+        ");
+        sendSuccess($stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+
+    $page    = max(1, intval($_GET['page']     ?? 1));
+    $perPage = max(1, min(100, intval($_GET['per_page'] ?? 10)));
+    $search  = trim($_GET['search'] ?? '');
+    $offset  = ($page - 1) * $perPage;
+
+    $where  = [];
+    $params = [];
+
+    if ($search !== '') {
+        $where[]  = "(nombre LIKE ? OR codigo LIKE ?)";
+        $params[] = "%$search%";
+        $params[] = "%$search%";
+    }
+
+    $whereSQL = count($where) > 0 ? "WHERE " . implode(" AND ", $where) : "";
+
+    $countStmt = $pdo->prepare("SELECT COUNT(*) FROM materia $whereSQL");
+    $countStmt->execute($params);
+    $total = (int) $countStmt->fetchColumn();
+
+    $params[] = $perPage;
+    $params[] = $offset;
+
+    $stmt = $pdo->prepare("
+        SELECT id, nombre AS name, codigo AS code, creditos AS credits, profesor_id AS teacherId
+        FROM materia
+        $whereSQL
+        ORDER BY nombre ASC
+        LIMIT ? OFFSET ?
+    ");
+    $stmt->execute($params);
+
+    sendSuccess([
+        "items"       => $stmt->fetchAll(PDO::FETCH_ASSOC),
+        "total"       => $total,
+        "page"        => $page,
+        "per_page"    => $perPage,
+        "total_pages" => (int) ceil($total / $perPage)
+    ]);
 }
 
 elseif ($method === 'POST') {
     requireRole($pdo, 'admin');
     $data = json_decode(file_get_contents("php://input"), true);
-
-    if (empty($data['name']) || empty($data['code'])) {
-        http_response_code(400);
-        echo json_encode(["error" => "Nombre y código son obligatorios"]);
-        exit;
-    }
+    validateRequired($data, ['name', 'code']);
 
     $check = $pdo->prepare("SELECT id FROM materia WHERE codigo = ?");
     $check->execute([$data['code']]);
     if ($check->fetch()) {
-        http_response_code(409);
-        echo json_encode(["error" => "Ya existe una materia con ese código"]);
-        exit;
+        sendError("Ya existe una materia con ese código", 409);
     }
 
     $stmt = $pdo->prepare("INSERT INTO materia (nombre, codigo, creditos, profesor_id) VALUES (?, ?, ?, ?)");
     $stmt->execute([$data['name'], $data['code'], $data['credits'] ?? 3, $data['teacherId'] ?? null]);
 
-    http_response_code(201);
-    echo json_encode(["success" => true, "id" => $pdo->lastInsertId()]);
+    sendCreated(["id" => $pdo->lastInsertId()]);
 }
 
 elseif ($method === 'PUT') {
     requireRole($pdo, 'admin');
     $data = json_decode(file_get_contents("php://input"), true);
-
-    if (empty($data['id'])) {
-        http_response_code(400);
-        echo json_encode(["error" => "ID requerido para editar"]);
-        exit;
-    }
+    validateRequired($data, ['id', 'name', 'code']);
 
     $check = $pdo->prepare("SELECT id FROM materia WHERE codigo = ? AND id != ?");
     $check->execute([$data['code'], $data['id']]);
     if ($check->fetch()) {
-        http_response_code(409);
-        echo json_encode(["error" => "Ese código ya está en uso"]);
-        exit;
+        sendError("Ese código ya está en uso", 409);
     }
 
     $pdo->prepare("UPDATE materia SET nombre=?, codigo=?, creditos=?, profesor_id=? WHERE id=?")
         ->execute([$data['name'], $data['code'], $data['credits'] ?? 3, $data['teacherId'] ?? null, $data['id']]);
 
-    echo json_encode(["success" => true, "message" => "Materia actualizada"]);
+    sendSuccess(["message" => "Materia actualizada"]);
+}
+
+else {
+    sendError("Método no permitido", 405);
 }
 ?>

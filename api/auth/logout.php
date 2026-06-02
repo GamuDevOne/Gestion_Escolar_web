@@ -2,9 +2,7 @@
 require '../config/db.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    echo json_encode(["error" => "Método no permitido"]);
-    exit;
+    sendError("Método no permitido", 405);
 }
 
 $token = null;
@@ -22,5 +20,5 @@ if ($token) {
         ->execute([$token]);
 }
 
-echo json_encode(["success" => true, "message" => "Sesión cerrada"]);
+sendSuccess(["message" => "Sesión cerrada"]);
 ?>

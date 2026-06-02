@@ -23,13 +23,17 @@ let currentSubjectPage    = 1;
 let currentEnrollmentPage = 1;
 let perPage = 10;
 
-let studentFilter    = '';
-let professorFilter  = '';
-let subjectFilter    = '';
-let enrollmentFilter = '';
+let studentSearch    = '';
+let professorSearch  = '';
+let subjectSearch    = '';
+let enrollmentSearch = '';
+
+let studentTotal    = 0;
+let professorTotal  = 0;
+let subjectTotal    = 0;
+let enrollmentTotal = 0;
 
 // ==================== UTILIDADES ====================
-
 function showToast(title, icon = 'success') {
     Swal.fire({ title, icon, timer: 1500, showConfirmButton: false, toast: true, position: 'top-end' });
 }
@@ -57,30 +61,32 @@ async function logout() {
 }
 
 // ==================== CARGAR DATOS ====================
-
 async function loadData() {
     try {
-        const [studentsRes, teachersRes, subjectsRes, enrollmentsRes] = await Promise.all([
-            apiFetch('/estudiantes/'),
-            apiFetch('/profesores/'),
+        const [subjectsRes, enrollmentsRes, teachersRes] = await Promise.all([
             apiFetch('/materias/'),
-            apiFetch('/matriculas/')
+            apiFetch('/matriculas/'),
+            apiFetch('/profesores/')
         ]);
 
-        if (!studentsRes.ok)    throw new Error(`Error cargando estudiantes: ${studentsRes.status}`);
-        if (!teachersRes.ok)    throw new Error(`Error cargando profesores: ${teachersRes.status}`);
-        if (!subjectsRes.ok)    throw new Error(`Error cargando materias: ${subjectsRes.status}`);
-        if (!enrollmentsRes.ok) throw new Error(`Error cargando matrículas: ${enrollmentsRes.status}`);
+        const subjectsJson    = await subjectsRes.json();
+        const enrollmentsJson = await enrollmentsRes.json();
+        const teachersJson    = await teachersRes.json();
 
-        students    = await studentsRes.json();
-        teachers    = await teachersRes.json();
-        subjects    = await subjectsRes.json();
-        enrollments = await enrollmentsRes.json();
+        subjects    = subjectsJson.data?.items    ?? subjectsJson.data    ?? subjectsJson;
+        enrollments = enrollmentsJson.data?.items ?? enrollmentsJson.data ?? enrollmentsJson;
+        teachers    = teachersJson.data?.items    ?? teachersJson.data    ?? teachersJson;
 
         teachers.forEach(t => { if (!t.subjectIds) t.subjectIds = []; });
 
         setupSearch();
-        refreshAllViews();
+        await Promise.all([
+            loadStudentsPage(),
+            loadProfessorsPage(),
+            loadSubjectsPage(),
+            loadEnrollmentsPage()
+        ]);
+
         renderActivities();
         addActivity('Datos cargados desde el servidor');
 
@@ -90,8 +96,61 @@ async function loadData() {
     }
 }
 
-// ==================== ACTIVIDAD RECIENTE ====================
+// ==================== LOADERS POR ENTIDAD ====================
+async function loadStudentsPage() {
+    const params = new URLSearchParams({
+        page: currentStudentPage, per_page: perPage, search: studentSearch
+    });
+    const res  = await apiFetch(`/estudiantes/?${params}`);
+    const json = await res.json();
+    const data = json.data ?? json;
+    students     = data.items ?? data;
+    studentTotal = data.total ?? students.length;
+    renderStudents();
+    updateStats();
+}
 
+async function loadProfessorsPage() {
+    const params = new URLSearchParams({
+        page: currentProfessorPage, per_page: perPage, search: professorSearch
+    });
+    const res  = await apiFetch(`/profesores/?${params}`);
+    const json = await res.json();
+    const data = json.data ?? json;
+    teachers       = data.items ?? data;
+    professorTotal = data.total ?? teachers.length;
+    teachers.forEach(t => { if (!t.subjectIds) t.subjectIds = []; });
+    renderTeachers();
+    updateStats();
+}
+
+async function loadSubjectsPage() {
+    const params = new URLSearchParams({
+        page: currentSubjectPage, per_page: perPage, search: subjectSearch
+    });
+    const res  = await apiFetch(`/materias/?${params}`);
+    const json = await res.json();
+    const data = json.data ?? json;
+    subjects     = data.items ?? data;
+    subjectTotal = data.total ?? subjects.length;
+    renderSubjects();
+    updateStats();
+}
+
+async function loadEnrollmentsPage() {
+    const params = new URLSearchParams({
+        page: currentEnrollmentPage, per_page: perPage, search: enrollmentSearch
+    });
+    const res  = await apiFetch(`/matriculas/?${params}`);
+    const json = await res.json();
+    const data = json.data ?? json;
+    enrollments      = data.items ?? data;
+    enrollmentTotal  = data.total ?? enrollments.length;
+    renderEnrollments();
+    updateStats();
+}
+
+// ==================== ACTIVIDAD RECIENTE ====================
 function addActivity(action) {
     activities.unshift({ action, date: new Date().toLocaleString() });
     if (activities.length > 15) activities.pop();
@@ -107,55 +166,45 @@ function renderActivities() {
 }
 
 // ==================== ESTADÍSTICAS ====================
-
 function updateStats() {
-    document.getElementById('totalStudents').innerText    = students.length;
-    document.getElementById('totalTeachers').innerText    = teachers.length;
-    document.getElementById('totalSubjects').innerText    = subjects.length;
-    document.getElementById('totalEnrollments').innerText = enrollments.length;
+    document.getElementById('totalStudents').innerText    = studentTotal    || students.length;
+    document.getElementById('totalTeachers').innerText    = professorTotal  || teachers.length;
+    document.getElementById('totalSubjects').innerText    = subjectTotal    || subjects.length;
+    document.getElementById('totalEnrollments').innerText = enrollmentTotal || enrollments.length;
 }
 
-// ==================== PAGINACIÓN ====================
-
-function renderPaginatedTable(data, page, containerId, paginationId, rowRenderer) {
-    const start     = (page - 1) * perPage;
-    const paginated = data.slice(start, start + perPage);
-    const tbody     = document.getElementById(containerId);
-
-    if (tbody) {
-        tbody.innerHTML = paginated.length
-            ? paginated.map(rowRenderer).join('')
-            : `<tr class="empty-row"><td colspan="10">No hay registros</td></tr>`;
-    }
-
-    const totalPages    = Math.ceil(data.length / perPage);
+// ==================== PAGINACIÓN SERVER-SIDE ====================
+function renderServerPagination(paginationId, currentPage, totalPages, total, perPageVal, onPageChange) {
     const paginationDiv = document.getElementById(paginationId);
     if (!paginationDiv) return;
 
-    const entity = containerId.split('Table')[0];
+    const start = ((currentPage - 1) * perPageVal) + 1;
+    const end   = Math.min(currentPage * perPageVal, total);
+
     paginationDiv.innerHTML = `
-        <div class="page-info">Mostrando ${start + 1} a ${Math.min(start + perPage, data.length)} de ${data.length}</div>
+        <div class="page-info">Mostrando ${total > 0 ? start : 0}–${end} de ${total}</div>
         <div>
-            <select id="perPageSelect" class="per-page-select">
-                <option value="10" ${perPage === 10 ? 'selected' : ''}>10</option>
-                <option value="25" ${perPage === 25 ? 'selected' : ''}>25</option>
-                <option value="50" ${perPage === 50 ? 'selected' : ''}>50</option>
+            <select class="per-page-select" onchange="changePerPage('${paginationId}', this.value)">
+                <option value="10"  ${perPageVal === 10  ? 'selected' : ''}>10</option>
+                <option value="25"  ${perPageVal === 25  ? 'selected' : ''}>25</option>
+                <option value="50"  ${perPageVal === 50  ? 'selected' : ''}>50</option>
             </select> por página
         </div>
         <div>
-            <button onclick="changePage('${entity}', ${page - 1})" ${page <= 1 ? 'disabled' : ''}>Anterior</button>
-            Pág. ${page} de ${totalPages}
-            <button onclick="changePage('${entity}', ${page + 1})" ${page >= totalPages ? 'disabled' : ''}>Siguiente</button>
+            <button onclick="${onPageChange}(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>Anterior</button>
+            Pág. ${currentPage} de ${totalPages || 1}
+            <button onclick="${onPageChange}(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>Siguiente</button>
         </div>
     `;
-    document.getElementById('perPageSelect').onchange = e => { perPage = parseInt(e.target.value); refreshAllViews(); };
 }
 
-function changePage(entity, newPage) {
-    if (entity === 'students')   currentStudentPage   = newPage;
-    if (entity === 'professors') currentProfessorPage = newPage;
-    if (entity === 'subjects')   currentSubjectPage   = newPage;
-    refreshAllViews();
+function changePerPage(paginationId, value) {
+    perPage = parseInt(value);
+    currentStudentPage = currentProfessorPage = currentSubjectPage = currentEnrollmentPage = 1;
+    loadStudentsPage();
+    loadProfessorsPage();
+    loadSubjectsPage();
+    loadEnrollmentsPage();
 }
 
 function refreshAllViews() {
@@ -166,28 +215,78 @@ function refreshAllViews() {
     updateStats();
 }
 
-// ==================== ESTUDIANTES ====================
+// ==================== CAMBIO DE PÁGINA ====================
+function changeStudentPage(page) {
+    if (page < 1) return;
+    currentStudentPage = page;
+    loadStudentsPage();
+}
 
+function changeProfessorPage(page) {
+    if (page < 1) return;
+    currentProfessorPage = page;
+    loadProfessorsPage();
+}
+
+function changeSubjectPage(page) {
+    if (page < 1) return;
+    currentSubjectPage = page;
+    loadSubjectsPage();
+}
+
+function changeEnrollmentPage(page) {
+    if (page < 1) return;
+    currentEnrollmentPage = page;
+    loadEnrollmentsPage();
+}
+
+// ==================== BÚSQUEDA SERVER-SIDE ====================
+function setupSearch() {
+    document.getElementById('searchStudent')?.addEventListener('input', e => {
+        studentSearch = e.target.value;
+        currentStudentPage = 1;
+        loadStudentsPage();
+    });
+    document.getElementById('searchProfessor')?.addEventListener('input', e => {
+        professorSearch = e.target.value;
+        currentProfessorPage = 1;
+        loadProfessorsPage();
+    });
+    document.getElementById('searchSubject')?.addEventListener('input', e => {
+        subjectSearch = e.target.value;
+        currentSubjectPage = 1;
+        loadSubjectsPage();
+    });
+    document.getElementById('searchEnrollment')?.addEventListener('input', e => {
+        enrollmentSearch = e.target.value;
+        currentEnrollmentPage = 1;
+        loadEnrollmentsPage();
+    });
+}
+
+// ==================== ESTUDIANTES ====================
 function renderStudents() {
-    const filtered = students.filter(s =>
-        s.name.toLowerCase().includes(studentFilter) ||
-        s.email.toLowerCase().includes(studentFilter) ||
-        (s.identificacion || '').toLowerCase().includes(studentFilter)
-    );
-    renderPaginatedTable(filtered, currentStudentPage, 'studentsTable', 'studentPagination', s => `
-        <tr>
-            <td>${s.id}</td>
-            <td>${escapeHtml(s.identificacion || '—')}</td>
-            <td>${escapeHtml(s.name)}</td>
-            <td>${escapeHtml(s.email)}</td>
-            <td>${s.grade}</td>
-            <td>${escapeHtml(s.seccion || '—')}</td>
-            <td>
-                <button class="btn-edit"   onclick="editStudent(${s.id})"><i class="fas fa-edit"></i></button>
-                <button class="btn-danger" onclick="deleteStudent(${s.id})"><i class="fas fa-trash"></i></button>
-            </td>
-        </tr>
-    `);
+    const totalPages = Math.ceil(studentTotal / perPage);
+    const tbody = document.getElementById('studentsTable');
+    if (tbody) {
+        tbody.innerHTML = students.length
+            ? students.map(s => `
+                <tr>
+                    <td>${s.id}</td>
+                    <td>${escapeHtml(s.identificacion || '—')}</td>
+                    <td>${escapeHtml(s.name)}</td>
+                    <td>${escapeHtml(s.email)}</td>
+                    <td>${s.grade || '—'}</td>
+                    <td>${escapeHtml(s.seccion || '—')}</td>
+                    <td>
+                        <button class="btn-edit"   onclick="editStudent(${s.id})"><i class="fas fa-edit"></i></button>
+                        <button class="btn-danger" onclick="deleteStudent(${s.id})"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('')
+            : '<tr class="empty-row"><td colspan="7">No hay estudiantes</td></tr>';
+    }
+    renderServerPagination('studentPagination', currentStudentPage, totalPages, studentTotal, perPage, 'changeStudentPage');
 }
 
 function openStudentModal() {
@@ -213,15 +312,13 @@ async function deleteStudent(id) {
     try {
         const res = await apiFetch('/estudiantes/delete.php', { method: 'DELETE', body: JSON.stringify({ id }) });
         if (res.ok) {
-            students    = students.filter(s => s.id !== id);
-            enrollments = enrollments.filter(e => e.studentId !== id);
-            if (currentStudentPage > 1 && students.length <= (currentStudentPage - 1) * perPage) currentStudentPage--;
-            refreshAllViews();
+            await loadStudentsPage();
+            await loadEnrollmentsPage();
             addActivity(`Eliminó estudiante ID ${id}`);
             showToast('Estudiante eliminado');
         } else {
-            const error = await res.json();
-            Swal.fire('Error', error.error || 'No se pudo eliminar', 'error');
+            const json = await res.json();
+            Swal.fire('Error', json.error || 'No se pudo eliminar', 'error');
         }
     } catch (error) { Swal.fire('Error', error.message, 'error'); }
 }
@@ -240,49 +337,44 @@ document.getElementById('studentForm')?.addEventListener('submit', async functio
     try {
         const res = await apiFetch('/estudiantes/', { method: id ? 'PUT' : 'POST', body: JSON.stringify(student) });
         if (res.ok) {
-            const result = await res.json();
-            if (id) {
-                students[students.findIndex(s => s.id === parseInt(id))] = { ...student, id: parseInt(id) };
-                showToast('Estudiante actualizado');
-                addActivity(`Editó ${student.name}`);
-            } else {
-                students.push({ ...student, id: result.id });
-                showToast('Estudiante creado');
-                addActivity(`Agregó ${student.name}`);
-            }
-            refreshAllViews();
+            showToast(id ? 'Estudiante actualizado' : 'Estudiante creado');
+            addActivity(id ? `Editó ${student.name}` : `Agregó ${student.name}`);
+            await loadStudentsPage();
             closeModal('studentModal');
         } else {
-            const error = await res.json();
-            Swal.fire('Error', error.error || 'No se pudo guardar', 'error');
+            const json = await res.json();
+            Swal.fire('Error', json.error || 'No se pudo guardar', 'error');
         }
     } catch (error) { Swal.fire('Error', error.message, 'error'); }
 });
 
 // ==================== PROFESORES ====================
-
 function renderTeachers() {
-    const filtered = teachers.filter(t =>
-        t.name.toLowerCase().includes(professorFilter) ||
-        t.email.toLowerCase().includes(professorFilter) ||
-        t.specialty.toLowerCase().includes(professorFilter)
-    );
-    renderPaginatedTable(filtered, currentProfessorPage, 'professorsTable', 'professorPagination', t => {
-        const teacherSubjects = subjects.filter(s => t.subjectIds?.includes(s.id)).map(s => s.name).join(', ') || 'Sin materias';
-        return `
-            <tr>
-                <td>${t.id}</td>
-                <td>${escapeHtml(t.name)}</td>
-                <td>${escapeHtml(t.email)}</td>
-                <td>${escapeHtml(t.specialty)}</td>
-                <td><span class="badge">${teacherSubjects.substring(0, 40)}${teacherSubjects.length > 40 ? '…' : ''}</span></td>
-                <td>
-                    <button class="btn-edit"   onclick="editTeacher(${t.id})"><i class="fas fa-edit"></i></button>
-                    <button class="btn-danger" onclick="deleteTeacher(${t.id})"><i class="fas fa-trash"></i></button>
-                </td>
-            </tr>
-        `;
-    });
+    const totalPages = Math.ceil(professorTotal / perPage);
+    const tbody = document.getElementById('professorsTable');
+    if (tbody) {
+        tbody.innerHTML = teachers.length
+            ? teachers.map(t => {
+                const teacherSubjects = subjects
+                    .filter(s => parseInt(s.teacherId) === t.id)
+                    .map(s => s.name).join(', ') || 'Sin materias';
+                return `
+                    <tr>
+                        <td>${t.id}</td>
+                        <td>${escapeHtml(t.name)}</td>
+                        <td>${escapeHtml(t.email)}</td>
+                        <td>${escapeHtml(t.specialty)}</td>
+                        <td><span class="badge">${teacherSubjects.substring(0, 40)}${teacherSubjects.length > 40 ? '…' : ''}</span></td>
+                        <td>
+                            <button class="btn-edit"   onclick="editTeacher(${t.id})"><i class="fas fa-edit"></i></button>
+                            <button class="btn-danger" onclick="deleteTeacher(${t.id})"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('')
+            : '<tr class="empty-row"><td colspan="6">No hay profesores</td></tr>';
+    }
+    renderServerPagination('professorPagination', currentProfessorPage, totalPages, professorTotal, perPage, 'changeProfessorPage');
 }
 
 function openProfessorModal() {
@@ -295,7 +387,9 @@ function openProfessorModal() {
 function editTeacher(id) {
     const t = teachers.find(t => t.id === id);
     if (!t) return;
-    document.getElementById('professorSubjects').innerHTML = subjects.map(s => `<option value="${s.id}" ${t.subjectIds?.includes(s.id) ? 'selected' : ''}>${s.name}</option>`).join('');
+    document.getElementById('professorSubjects').innerHTML = subjects.map(s =>
+        `<option value="${s.id}" ${t.subjectIds?.includes(s.id) ? 'selected' : ''}>${s.name}</option>`
+    ).join('');
     document.getElementById('professorId').value             = t.id;
     document.getElementById('professorIdentificacion').value = t.identificacion || '';
     document.getElementById('professorName').value           = t.name;
@@ -309,15 +403,13 @@ async function deleteTeacher(id) {
     try {
         const res = await apiFetch('/profesores/delete.php', { method: 'DELETE', body: JSON.stringify({ id }) });
         if (res.ok) {
-            teachers = teachers.filter(t => t.id !== id);
-            subjects.forEach(s => { if (s.teacherId === id) s.teacherId = null; });
-            if (currentProfessorPage > 1 && teachers.length <= (currentProfessorPage - 1) * perPage) currentProfessorPage--;
-            refreshAllViews();
+            await loadProfessorsPage();
+            await loadSubjectsPage();
             addActivity(`Eliminó profesor ID ${id}`);
             showToast('Profesor eliminado');
         } else {
-            const error = await res.json();
-            Swal.fire('Error', error.error || 'No se pudo eliminar', 'error');
+            const json = await res.json();
+            Swal.fire('Error', json.error || 'No se pudo eliminar', 'error');
         }
     } catch (error) { Swal.fire('Error', error.message, 'error'); }
 }
@@ -336,53 +428,48 @@ document.getElementById('professorForm')?.addEventListener('submit', async funct
     try {
         const res = await apiFetch('/profesores/', { method: id ? 'PUT' : 'POST', body: JSON.stringify(teacher) });
         if (res.ok) {
-            const result = await res.json();
-            if (id) {
-                teachers[teachers.findIndex(t => t.id === parseInt(id))] = { ...teacher, id: parseInt(id) };
-                showToast('Profesor actualizado');
-                addActivity(`Editó ${teacher.name}`);
-            } else {
-                teachers.push({ ...teacher, id: result.id });
-                showToast('Profesor creado');
-                addActivity(`Agregó ${teacher.name}`);
-            }
-            refreshAllViews();
+            showToast(id ? 'Profesor actualizado' : 'Profesor creado');
+            addActivity(id ? `Editó ${teacher.name}` : `Agregó ${teacher.name}`);
+            await loadProfessorsPage();
             closeModal('professorModal');
         } else {
-            const error = await res.json();
-            Swal.fire('Error', error.error || 'No se pudo guardar', 'error');
+            const json = await res.json();
+            Swal.fire('Error', json.error || 'No se pudo guardar', 'error');
         }
     } catch (error) { Swal.fire('Error', error.message, 'error'); }
 });
 
 // ==================== MATERIAS ====================
-
 function renderSubjects() {
-    const filtered = subjects.filter(s =>
-        s.code.toLowerCase().includes(subjectFilter) ||
-        s.name.toLowerCase().includes(subjectFilter)
-    );
-    renderPaginatedTable(filtered, currentSubjectPage, 'subjectsTable', 'subjectPagination', s => {
-        const teacher = teachers.find(t => t.id === s.teacherId);
-        return `
-            <tr>
-                <td>${s.id}</td>
-                <td>${s.code}</td>
-                <td>${escapeHtml(s.name)}</td>
-                <td>${s.credits}</td>
-                <td>${teacher ? escapeHtml(teacher.name) : 'Sin asignar'}</td>
-                <td>
-                    <button class="btn-edit"   onclick="editSubject(${s.id})"><i class="fas fa-edit"></i></button>
-                    <button class="btn-danger" onclick="deleteSubject(${s.id})"><i class="fas fa-trash"></i></button>
-                </td>
-            </tr>
-        `;
-    });
+    const totalPages = Math.ceil(subjectTotal / perPage);
+    const tbody = document.getElementById('subjectsTable');
+    if (tbody) {
+        tbody.innerHTML = subjects.length
+            ? subjects.map(s => {
+                const teacher = teachers.find(t => t.id === parseInt(s.teacherId));
+                return `
+                    <tr>
+                        <td>${s.id}</td>
+                        <td>${escapeHtml(s.code)}</td>
+                        <td>${escapeHtml(s.name)}</td>
+                        <td>${s.credits}</td>
+                        <td>${teacher ? escapeHtml(teacher.name) : 'Sin asignar'}</td>
+                        <td>
+                            <button class="btn-edit"   onclick="editSubject(${s.id})"><i class="fas fa-edit"></i></button>
+                            <button class="btn-danger" onclick="deleteSubject(${s.id})"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            }).join('')
+            : '<tr class="empty-row"><td colspan="6">No hay materias</td></tr>';
+    }
+    renderServerPagination('subjectPagination', currentSubjectPage, totalPages, subjectTotal, perPage, 'changeSubjectPage');
 }
 
 function openSubjectModal() {
     document.getElementById('subjectTeacher').innerHTML =
-        '<option value="">-- Ninguno --</option>' + teachers.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+        '<option value="">-- Ninguno --</option>' +
+        teachers.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
     document.getElementById('subjectForm').reset();
     document.getElementById('subjectId').value      = '';
     document.getElementById('subjectCredits').value = 3;
@@ -393,7 +480,8 @@ function editSubject(id) {
     const s = subjects.find(s => s.id === id);
     if (!s) return;
     document.getElementById('subjectTeacher').innerHTML =
-        '<option value="">-- Ninguno --</option>' + teachers.map(t => `<option value="${t.id}" ${t.id === s.teacherId ? 'selected' : ''}>${t.name}</option>`).join('');
+        '<option value="">-- Ninguno --</option>' +
+        teachers.map(t => `<option value="${t.id}" ${t.id === parseInt(s.teacherId) ? 'selected' : ''}>${escapeHtml(t.name)}</option>`).join('');
     document.getElementById('subjectId').value      = s.id;
     document.getElementById('subjectCode').value    = s.code;
     document.getElementById('subjectName').value    = s.name;
@@ -406,15 +494,13 @@ async function deleteSubject(id) {
     try {
         const res = await apiFetch('/materias/delete.php', { method: 'DELETE', body: JSON.stringify({ id }) });
         if (res.ok) {
-            subjects    = subjects.filter(s => s.id !== id);
-            enrollments = enrollments.filter(e => e.subjectId !== id);
-            if (currentSubjectPage > 1 && subjects.length <= (currentSubjectPage - 1) * perPage) currentSubjectPage--;
-            refreshAllViews();
+            await loadSubjectsPage();
+            await loadEnrollmentsPage();
             addActivity(`Eliminó materia ID ${id}`);
             showToast('Materia eliminada');
         } else {
-            const error = await res.json();
-            Swal.fire('Error', error.error || 'No se pudo eliminar', 'error');
+            const json = await res.json();
+            Swal.fire('Error', json.error || 'No se pudo eliminar', 'error');
         }
     } catch (error) { Swal.fire('Error', error.message, 'error'); }
 }
@@ -433,134 +519,77 @@ document.getElementById('subjectForm')?.addEventListener('submit', async functio
     try {
         const res = await apiFetch('/materias/', { method: id ? 'PUT' : 'POST', body: JSON.stringify(subject) });
         if (res.ok) {
-            const result = await res.json();
-            if (id) {
-                subjects[subjects.findIndex(s => s.id === parseInt(id))] = { ...subject, id: parseInt(id) };
-                showToast('Materia actualizada');
-                addActivity(`Editó ${subject.name}`);
-            } else {
-                subjects.push({ ...subject, id: result.id });
-                showToast('Materia creada');
-                addActivity(`Agregó ${subject.name}`);
-            }
-            refreshAllViews();
+            showToast(id ? 'Materia actualizada' : 'Materia creada');
+            addActivity(id ? `Editó ${subject.name}` : `Agregó ${subject.name}`);
+            await loadSubjectsPage();
             closeModal('subjectModal');
         } else {
-            const error = await res.json();
-            Swal.fire('Error', error.error || 'No se pudo guardar', 'error');
+            const json = await res.json();
+            Swal.fire('Error', json.error || 'No se pudo guardar', 'error');
         }
     } catch (error) { Swal.fire('Error', error.message, 'error'); }
 });
 
 // ==================== MATRÍCULAS ====================
-
 function renderEnrollments() {
-    const enrollmentData = enrollments.map((e, idx) => {
-        const student = students.find(s => s.id === e.studentId);
-        const subject = subjects.find(s => s.id === e.subjectId);
-        const teacher = teachers.find(t => t.id === subject?.teacherId);
-        return {
-            id: e.id, originalIndex: idx,
-            studentName:    student ? student.name  : 'N/A',
-            studentGrade:   student ? student.grade : 'N/A',
-            subjectName:    subject ? subject.name  : 'N/A',
-            teacherName:    teacher ? teacher.name  : 'N/A',
-            enrollmentDate: e.enrollmentDate || new Date().toLocaleDateString()
-        };
-    });
-
-    const filtered   = enrollmentData.filter(e =>
-        e.studentName.toLowerCase().includes(enrollmentFilter) ||
-        e.subjectName.toLowerCase().includes(enrollmentFilter)
-    );
-    const start      = (currentEnrollmentPage - 1) * perPage;
-    const paginated  = filtered.slice(start, start + perPage);
-    const totalPages = Math.ceil(filtered.length / perPage);
-
+    const totalPages = Math.ceil(enrollmentTotal / perPage);
     const tbody = document.getElementById('enrollmentsTable');
     if (tbody) {
-        tbody.innerHTML = paginated.length
-            ? paginated.map((e, i) => `
+        tbody.innerHTML = enrollments.length
+            ? enrollments.map((e, i) => `
                 <tr>
-                    <td>${start + i + 1}</td>
-                    <td><strong>${escapeHtml(e.studentName)}</strong><br><small class="badge">${e.studentGrade}</small></td>
+                    <td>${((currentEnrollmentPage - 1) * perPage) + i + 1}</td>
+                    <td><strong>${escapeHtml(e.studentName)}</strong><br><small class="badge">${e.studentGrade || '—'}</small></td>
                     <td>${escapeHtml(e.subjectName)}</td>
-                    <td>${escapeHtml(e.teacherName)}</td>
-                    <td>${e.enrollmentDate}</td>
+                    <td>${escapeHtml(e.teacherName || 'Sin asignar')}</td>
+                    <td>${e.enrollmentDate || '—'}</td>
                     <td><button class="btn-danger" onclick="deleteEnrollment(${e.id})"><i class="fas fa-trash"></i></button></td>
                 </tr>
             `).join('')
-            : '<tr class="empty-row"><td colspan="6">No hay matrículas que coincidan</td></tr>';
+            : '<tr class="empty-row"><td colspan="6">No hay matrículas</td></tr>';
     }
-
-    const paginationDiv = document.getElementById('enrollmentPagination');
-    if (paginationDiv) {
-        paginationDiv.innerHTML = `
-            <div class="page-info">Mostrando ${start + 1} a ${Math.min(start + perPage, filtered.length)} de ${filtered.length} matrículas</div>
-            <div>
-                <button onclick="changeEnrollmentPage(${currentEnrollmentPage - 1})" ${currentEnrollmentPage <= 1 ? 'disabled' : ''}><i class="fas fa-chevron-left"></i> Anterior</button>
-                Página ${currentEnrollmentPage} de ${totalPages || 1}
-                <button onclick="changeEnrollmentPage(${currentEnrollmentPage + 1})" ${currentEnrollmentPage >= totalPages ? 'disabled' : ''}>Siguiente <i class="fas fa-chevron-right"></i></button>
-            </div>
-            <div>
-                <select id="perPageSelectEnroll" class="per-page-select">
-                    <option value="10" ${perPage === 10 ? 'selected' : ''}>10</option>
-                    <option value="25" ${perPage === 25 ? 'selected' : ''}>25</option>
-                    <option value="50" ${perPage === 50 ? 'selected' : ''}>50</option>
-                </select> por página
-            </div>
-        `;
-        document.getElementById('perPageSelectEnroll').onchange = e => {
-            perPage = parseInt(e.target.value);
-            currentEnrollmentPage = 1;
-            renderEnrollments();
-        };
-    }
+    renderServerPagination('enrollmentPagination', currentEnrollmentPage, totalPages, enrollmentTotal, perPage, 'changeEnrollmentPage');
     updateEnrollmentSelects();
-}
-
-function changeEnrollmentPage(newPage) {
-    if (newPage >= 1) { currentEnrollmentPage = newPage; renderEnrollments(); }
 }
 
 function updateEnrollmentSelects() {
     const studentSelect = document.getElementById('enrollmentStudent');
     const subjectSelect = document.getElementById('enrollmentSubject');
-    if (studentSelect) studentSelect.innerHTML = '<option value="">-- Seleccionar Estudiante --</option>' + students.map(s => `<option value="${s.id}">${escapeHtml(s.name)} — ${s.grade}</option>`).join('');
-    if (subjectSelect) subjectSelect.innerHTML = '<option value="">-- Seleccionar Materia --</option>' + subjects.map(s => `<option value="${s.id}">${escapeHtml(s.name)} (${s.code})</option>`).join('');
+    if (studentSelect) studentSelect.innerHTML =
+        '<option value="">-- Seleccionar Estudiante --</option>' +
+        students.map(s => `<option value="${s.id}">${escapeHtml(s.name)} — ${s.grade || ''}</option>`).join('');
+    if (subjectSelect) subjectSelect.innerHTML =
+        '<option value="">-- Seleccionar Materia --</option>' +
+        subjects.map(s => `<option value="${s.id}">${escapeHtml(s.name)} (${s.code})</option>`).join('');
 }
 
 async function deleteEnrollment(id) {
     const enrollment = enrollments.find(e => e.id === id);
-    const student    = students.find(s => s.id === enrollment?.studentId);
-    const subject    = subjects.find(s => s.id === enrollment?.subjectId);
-
     const result = await Swal.fire({
         title: '¿Eliminar matrícula?',
-        html: `Estás por eliminar la matrícula de <strong>${student?.name}</strong> en <strong>${subject?.name}</strong>`,
+        html: `Estás por eliminar la matrícula de <strong>${enrollment?.studentName}</strong> en <strong>${enrollment?.subjectName}</strong>`,
         icon: 'warning', showCancelButton: true, confirmButtonColor: '#8B0000',
         confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar'
     });
-
     if (result.isConfirmed) {
         try {
             const res = await apiFetch('/matriculas/', { method: 'DELETE', body: JSON.stringify({ id }) });
             if (res.ok) {
-                enrollments = enrollments.filter(e => e.id !== id);
-                renderEnrollments();
+                await loadEnrollmentsPage();
                 updateStats();
-                addActivity(`Eliminó matrícula: ${student?.name} — ${subject?.name}`);
+                addActivity(`Eliminó matrícula ID ${id}`);
                 showToast('Matrícula eliminada');
             } else {
-                const error = await res.json();
-                Swal.fire('Error', error.error || 'No se pudo eliminar', 'error');
+                const json = await res.json();
+                Swal.fire('Error', json.error || 'No se pudo eliminar', 'error');
             }
         } catch (error) { Swal.fire('Error', error.message, 'error'); }
     }
 }
 
 function openEnrollmentModal() {
-    renderEnrollments();
+    updateEnrollmentSelects();
+    document.getElementById('enrollmentForm').reset();
     document.getElementById('enrollmentModal').style.display = 'flex';
 }
 
@@ -569,43 +598,27 @@ document.getElementById('enrollmentForm')?.addEventListener('submit', async func
     const studentId = parseInt(document.getElementById('enrollmentStudent').value);
     const subjectId = parseInt(document.getElementById('enrollmentSubject').value);
 
-    if (!studentId || !subjectId) { Swal.fire('Error', 'Selecciona un estudiante y una materia', 'error'); return; }
-    if (enrollments.some(e => e.studentId === studentId && e.subjectId === subjectId)) {
-        Swal.fire('Error', 'Este estudiante ya está matriculado en esta materia', 'error'); return;
+    if (!studentId || !subjectId) {
+        Swal.fire('Error', 'Selecciona un estudiante y una materia', 'error');
+        return;
     }
-
-    const student = students.find(s => s.id === studentId);
-    const subject = subjects.find(s => s.id === subjectId);
 
     try {
         const res = await apiFetch('/matriculas/', { method: 'POST', body: JSON.stringify({ studentId, subjectId }) });
         if (res.ok) {
-            const result = await res.json();
-            enrollments.push({ id: result.id, studentId, subjectId, enrollmentDate: new Date().toLocaleDateString() });
-            renderEnrollments();
+            await loadEnrollmentsPage();
             updateStats();
-            addActivity(`Asignó ${subject?.name} a ${student?.name}`);
-            showToast(`Matrícula creada: ${student?.name} — ${subject?.name}`);
+            addActivity(`Nueva matrícula creada`);
+            showToast('Matrícula creada');
             closeModal('enrollmentModal');
-            document.getElementById('enrollmentForm').reset();
         } else {
-            const error = await res.json();
-            Swal.fire('Error', error.error || 'No se pudo crear', 'error');
+            const json = await res.json();
+            Swal.fire('Error', json.error || 'No se pudo crear', 'error');
         }
     } catch (error) { Swal.fire('Error', error.message, 'error'); }
 });
 
-// ==================== BÚSQUEDA ====================
-
-function setupSearch() {
-    document.getElementById('searchStudent')?.addEventListener('input', e => { studentFilter = e.target.value.toLowerCase(); currentStudentPage = 1; renderStudents(); });
-    document.getElementById('searchProfessor')?.addEventListener('input', e => { professorFilter = e.target.value.toLowerCase(); currentProfessorPage = 1; renderTeachers(); });
-    document.getElementById('searchSubject')?.addEventListener('input', e => { subjectFilter = e.target.value.toLowerCase(); currentSubjectPage = 1; renderSubjects(); });
-    document.getElementById('searchEnrollment')?.addEventListener('input', e => { enrollmentFilter = e.target.value.toLowerCase(); currentEnrollmentPage = 1; renderEnrollments(); });
-}
-
 // ==================== NAVEGACIÓN ====================
-
 document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.addEventListener('click', function () {
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -613,6 +626,9 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
         const view = this.dataset.view;
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById(`${view}View`).classList.add('active');
-        if (view === 'enrollments') renderEnrollments();
+        if (view === 'enrollments') loadEnrollmentsPage();
+        if (view === 'students')   loadStudentsPage();
+        if (view === 'professors') loadProfessorsPage();
+        if (view === 'subjects')   loadSubjectsPage();
     });
 });

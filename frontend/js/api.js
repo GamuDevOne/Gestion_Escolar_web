@@ -1,26 +1,10 @@
-/**
- * api.js — Helper de fetch autenticado
- * Centraliza la URL base, el token y el manejo de 401/403.
- * Todos los módulos (admin, profesor, estudiante) lo usan.
- */
-
 const API_URL = 'http://localhost/gestion_escolar/api';
 
-/** Obtiene el token almacenado en sesión local. */
 function getToken() {
     const user = JSON.parse(localStorage.getItem('currentUser'));
     return user?.token ?? null;
 }
 
-/**
- * Wrapper de fetch que inyecta automáticamente el Bearer token.
- * Si recibe 401, limpia la sesión y redirige al login.
- * Si recibe 403, lanza un error descriptivo sin redirigir.
- *
- * @param {string} endpoint  - Ruta relativa a API_URL (ej: '/estudiantes/')
- * @param {object} options   - Opciones normales de fetch (method, body, etc.)
- * @returns {Promise<Response>}
- */
 async function apiFetch(endpoint, options = {}) {
     const token = getToken();
 
@@ -30,10 +14,7 @@ async function apiFetch(endpoint, options = {}) {
         ...(options.headers ?? {})
     };
 
-    const response = await fetch(`${API_URL}${endpoint}`, {
-        ...options,
-        headers
-    });
+    const response = await fetch(`${API_URL}${endpoint}`, { ...options, headers });
 
     if (response.status === 401) {
         localStorage.removeItem('currentUser');
@@ -47,4 +28,18 @@ async function apiFetch(endpoint, options = {}) {
     }
 
     return response;
+}
+
+/**
+ * Hace fetch y devuelve directamente el array/objeto en data[].
+ * Para GET que esperan una lista o un objeto de la API.
+ */
+async function apiGet(endpoint) {
+    const res = await apiFetch(endpoint);
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error ?? `Error ${res.status}`);
+    }
+    const json = await res.json();
+    return json.data ?? json;
 }

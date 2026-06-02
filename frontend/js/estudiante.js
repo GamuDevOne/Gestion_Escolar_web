@@ -28,9 +28,13 @@ async function loadData() {
         if (!gradesRes.ok)      throw new Error('Error cargando notas');
         if (!subjectsRes.ok)    throw new Error('Error cargando materias');
 
-        const allEnrollments = await enrollmentsRes.json();
-        const allGrades      = await gradesRes.json();
-        const allSubjects    = await subjectsRes.json();
+        const enrollmentsJson = await enrollmentsRes.json();
+        const gradesJson      = await gradesRes.json();
+        const subjectsJson    = await subjectsRes.json();
+
+        const allEnrollments = enrollmentsJson.data ?? enrollmentsJson;
+        const allGrades      = gradesJson.data      ?? gradesJson;
+        const allSubjects    = subjectsJson.data    ?? subjectsJson;
 
         // El servidor ya filtró matrículas y notas de este estudiante
         myEnrollments = allEnrollments;
@@ -264,7 +268,8 @@ async function renderMyComments() {
     try {
         const res = await apiFetch('/comentarios/');
         if (!res.ok) throw new Error();
-        const comments = await res.json();
+        const json     = await res.json();
+        const comments = json.data ?? json;
 
         if (comments.length === 0) {
             container.innerHTML = '<div class="comment-card"><i class="fas fa-comment-dots"></i> Aún no has enviado comentarios</div>';
