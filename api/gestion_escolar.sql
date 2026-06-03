@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 01-06-2026 a las 09:00:28
+-- Tiempo de generación: 04-06-2026 a las 00:06:26
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.2.12
 
@@ -193,7 +193,14 @@ INSERT INTO `sesion` (`id`, `usuario_id`, `token`, `expires_at`, `activa`, `crea
 (4, 1, '3dc4f647588b30f4a2e2a1f6ceb3e6e21fa8b72d156b76ff2a2f7084e7369aa1', '2026-06-01 16:32:47', 0, '2026-06-01 01:32:47'),
 (5, 3, 'ca47a2ec4abc010896055d3443b1066515f296b6e71a4f059f9ed46f69f9c9eb', '2026-06-01 16:39:46', 0, '2026-06-01 01:39:46'),
 (6, 2, '32716c4ae37a84af8357561dee19f9e3099838a8603ab0bc8adca5a122bcfb47', '2026-06-01 16:43:13', 0, '2026-06-01 01:43:13'),
-(7, 1, '77ad81371d47b6c8d60890769396c87480c95df5200572553329047caf336a02', '2026-06-01 16:59:50', 1, '2026-06-01 01:59:50');
+(7, 1, '77ad81371d47b6c8d60890769396c87480c95df5200572553329047caf336a02', '2026-06-01 16:59:50', 0, '2026-06-01 01:59:50'),
+(8, 1, 'aa50f1542ad1ce81bfdaccc0c48036a33857748a56e08320489ddf645a9b758f', '2026-06-02 12:15:28', 0, '2026-06-01 21:15:28'),
+(9, 2, 'f59eed8ec7c7f051921e7892f2c62288df27bb6fb82f951a729c697a225a8316', '2026-06-02 12:18:23', 0, '2026-06-01 21:18:23'),
+(10, 1, '0cf1697377b49fc1e3a5e1cf332832dfb8f4814861317280b41ec78ecefc30ea', '2026-06-02 12:21:52', 0, '2026-06-01 21:21:52'),
+(11, 1, 'bbd32166ae99aea210896a4818bbb5266e43eb002ecf5ecb045bcdfe5014401f', '2026-06-03 04:28:28', 0, '2026-06-02 13:28:28'),
+(12, 2, '975d7600a58383d13979b0cf2e8edef50841bca9b41b2b1a98614b5c4de42386', '2026-06-03 04:39:01', 0, '2026-06-02 13:39:01'),
+(13, 3, '549fb953f6ba529903823c2e7d2cfd04ebbe6b39be84190bb63d5e79353a9ab8', '2026-06-03 04:49:14', 0, '2026-06-02 13:49:14'),
+(14, 1, 'd94989819fa3228e34221222af8fe353abbd86aa2825a3ab40f981ef2ecb6bdb', '2026-06-03 04:49:36', 0, '2026-06-02 13:49:36');
 
 -- --------------------------------------------------------
 
@@ -347,7 +354,7 @@ ALTER TABLE `profesor`
 -- AUTO_INCREMENT de la tabla `sesion`
 --
 ALTER TABLE `sesion`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- AUTO_INCREMENT de la tabla `usuario`

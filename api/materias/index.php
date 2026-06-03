@@ -7,7 +7,6 @@ $method = $_SERVER['REQUEST_METHOD'];
 if ($method === 'GET') {
     requireRole($pdo, ['admin', 'profesor', 'estudiante']);
 
-    // Profesor y estudiante reciben todas las materias sin paginar
     if ($authUser['rol'] !== 'admin') {
         $stmt = $pdo->query("
             SELECT id, nombre AS name, codigo AS code, creditos AS credits, profesor_id AS teacherId
@@ -36,15 +35,13 @@ if ($method === 'GET') {
     $countStmt->execute($params);
     $total = (int) $countStmt->fetchColumn();
 
-    $params[] = $perPage;
-    $params[] = $offset;
-
+    // LIMIT y OFFSET como enteros directos, no como parámetros
     $stmt = $pdo->prepare("
         SELECT id, nombre AS name, codigo AS code, creditos AS credits, profesor_id AS teacherId
         FROM materia
         $whereSQL
         ORDER BY nombre ASC
-        LIMIT ? OFFSET ?
+        LIMIT $perPage OFFSET $offset
     ");
     $stmt->execute($params);
 

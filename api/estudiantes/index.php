@@ -7,7 +7,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 if ($method === 'GET') {
     requireRole($pdo, 'admin');
 
-    $page    = max(1, intval($_GET['page']   ?? 1));
+    $page    = max(1, intval($_GET['page']     ?? 1));
     $perPage = max(1, min(100, intval($_GET['per_page'] ?? 10)));
     $search  = trim($_GET['search'] ?? '');
     $offset  = ($page - 1) * $perPage;
@@ -28,27 +28,23 @@ if ($method === 'GET') {
     $countStmt->execute($params);
     $total = (int) $countStmt->fetchColumn();
 
-    $params[] = $perPage;
-    $params[] = $offset;
-
     $stmt = $pdo->prepare("
         SELECT id, nombre AS name, email, identificacion, grado AS grade, seccion
         FROM estudiante
         $whereSQL
         ORDER BY nombre ASC
-        LIMIT ? OFFSET ?
+        LIMIT $perPage OFFSET $offset
     ");
     $stmt->execute($params);
 
     sendSuccess([
-        "items"      => $stmt->fetchAll(PDO::FETCH_ASSOC),
-        "total"      => $total,
-        "page"       => $page,
-        "per_page"   => $perPage,
+        "items"       => $stmt->fetchAll(PDO::FETCH_ASSOC),
+        "total"       => $total,
+        "page"        => $page,
+        "per_page"    => $perPage,
         "total_pages" => (int) ceil($total / $perPage)
     ]);
 }
-
 elseif ($method === 'POST') {
     requireRole($pdo, 'admin');
     $data = json_decode(file_get_contents("php://input"), true);

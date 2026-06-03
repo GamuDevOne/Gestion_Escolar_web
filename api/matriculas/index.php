@@ -18,7 +18,6 @@ if ($method === 'GET') {
         $params[] = $authUser['id_referencia'];
     }
 
-    // Búsqueda y paginación solo para admin
     if ($authUser['rol'] === 'admin') {
         $search = trim($_GET['search'] ?? '');
         if ($search !== '') {
@@ -38,17 +37,17 @@ if ($method === 'GET') {
         $whereSQL
     ";
 
+    $selectFields = "
+        SELECT m.id, m.estudiante_id AS studentId, m.materia_id AS subjectId,
+               m.fecha_asignacion AS enrollmentDate,
+               e.nombre AS studentName, e.grado AS studentGrade, e.email AS studentEmail,
+               s.nombre AS subjectName, s.codigo AS subjectCode,
+               p.nombre AS teacherName
+    ";
+
     // Profesor y estudiante reciben todo sin paginar
     if ($authUser['rol'] !== 'admin') {
-        $stmt = $pdo->prepare("
-            SELECT m.id, m.estudiante_id AS studentId, m.materia_id AS subjectId,
-                   m.fecha_asignacion AS enrollmentDate,
-                   e.nombre AS studentName, e.grado AS studentGrade, e.email AS studentEmail,
-                   s.nombre AS subjectName, s.codigo AS subjectCode,
-                   p.nombre AS teacherName
-            $baseQuery
-            ORDER BY e.nombre ASC
-        ");
+        $stmt = $pdo->prepare("$selectFields $baseQuery ORDER BY e.nombre ASC");
         $stmt->execute($params);
         sendSuccess($stmt->fetchAll(PDO::FETCH_ASSOC));
     }
@@ -61,19 +60,7 @@ if ($method === 'GET') {
     $countStmt->execute($params);
     $total = (int) $countStmt->fetchColumn();
 
-    $params[] = $perPage;
-    $params[] = $offset;
-
-    $stmt = $pdo->prepare("
-        SELECT m.id, m.estudiante_id AS studentId, m.materia_id AS subjectId,
-               m.fecha_asignacion AS enrollmentDate,
-               e.nombre AS studentName, e.grado AS studentGrade, e.email AS studentEmail,
-               s.nombre AS subjectName, s.codigo AS subjectCode,
-               p.nombre AS teacherName
-        $baseQuery
-        ORDER BY e.nombre ASC
-        LIMIT ? OFFSET ?
-    ");
+    $stmt = $pdo->prepare("$selectFields $baseQuery ORDER BY e.nombre ASC LIMIT $perPage OFFSET $offset");
     $stmt->execute($params);
 
     sendSuccess([

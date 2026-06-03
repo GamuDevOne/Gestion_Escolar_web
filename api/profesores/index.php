@@ -28,15 +28,12 @@ if ($method === 'GET') {
     $countStmt->execute($params);
     $total = (int) $countStmt->fetchColumn();
 
-    $params[] = $perPage;
-    $params[] = $offset;
-
     $stmt = $pdo->prepare("
         SELECT id, nombre AS name, email, identificacion, especialidad AS specialty
         FROM profesor
         $whereSQL
         ORDER BY nombre ASC
-        LIMIT ? OFFSET ?
+        LIMIT $perPage OFFSET $offset
     ");
     $stmt->execute($params);
 
