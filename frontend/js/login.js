@@ -31,7 +31,7 @@ document.getElementById('loginForm').addEventListener('submit', async function (
         }));
 
         // Si no ha cambiado la contraseña, redirigir al cambio
-        if (!data.password_cambiada) {
+       if (!data.password_cambiada && data.rol !== 'admin') {//solo aplica para estudiante y profesor
             window.location.href = 'cambiar_password.html';
             return;
         }
