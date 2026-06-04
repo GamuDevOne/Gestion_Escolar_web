@@ -29,7 +29,8 @@ if ($method === 'GET') {
     $total = (int) $countStmt->fetchColumn();
 
     $stmt = $pdo->prepare("
-        SELECT id, nombre AS name, email, identificacion, especialidad AS specialty
+        SELECT id, nombre AS name, email, identificacion, especialidad AS specialty,
+               password_inicial AS initialPassword
         FROM profesor
         $whereSQL
         ORDER BY nombre ASC
@@ -57,11 +58,21 @@ elseif ($method === 'POST') {
         sendError("Ya existe un profesor con ese email o identificación", 409);
     }
 
-    $stmt = $pdo->prepare("INSERT INTO profesor (nombre, email, identificacion, especialidad) VALUES (?, ?, ?, ?)");
-    $stmt->execute([$data['name'], $data['email'], $data['identificacion'], $data['specialty'] ?? null]);
+    $passwordPlain = !empty($data['initialPassword'])
+        ? $data['initialPassword']
+        : $data['identificacion'];
+
+    $stmt = $pdo->prepare("
+        INSERT INTO profesor (nombre, email, identificacion, especialidad, password_inicial)
+        VALUES (?, ?, ?, ?, ?)
+    ");
+    $stmt->execute([
+        $data['name'], $data['email'], $data['identificacion'],
+        $data['specialty'] ?? null, $passwordPlain
+    ]);
     $profesorId = $pdo->lastInsertId();
 
-    $passwordHash = password_hash($data['identificacion'], PASSWORD_BCRYPT, ['cost' => 12]);
+    $passwordHash = password_hash($passwordPlain, PASSWORD_BCRYPT, ['cost' => 12]);
     $userCheck = $pdo->prepare("SELECT id FROM usuario WHERE email = ?");
     $userCheck->execute([$data['email']]);
     if (!$userCheck->fetch()) {
@@ -69,7 +80,11 @@ elseif ($method === 'POST') {
             ->execute([$data['email'], $passwordHash, $data['name'], $profesorId]);
     }
 
-    sendCreated(["id" => $profesorId, "message" => "Profesor creado. Contraseña inicial: {$data['identificacion']}"]);
+    sendCreated([
+        "id"              => $profesorId,
+        "initialPassword" => $passwordPlain,
+        "message"         => "Profesor creado. Contraseña inicial: $passwordPlain"
+    ]);
 }
 
 elseif ($method === 'PUT') {
@@ -83,11 +98,25 @@ elseif ($method === 'PUT') {
         sendError("Ese email o identificación ya está en uso", 409);
     }
 
-    $pdo->prepare("UPDATE profesor SET nombre=?, email=?, identificacion=?, especialidad=? WHERE id=?")
-        ->execute([$data['name'], $data['email'], $data['identificacion'], $data['specialty'] ?? null, $data['id']]);
+    $passwordPlain = !empty($data['initialPassword']) ? $data['initialPassword'] : null;
+
+    $pdo->prepare("
+        UPDATE profesor SET nombre=?, email=?, identificacion=?, especialidad=?,
+        password_inicial = COALESCE(?, password_inicial)
+        WHERE id=?
+    ")->execute([
+        $data['name'], $data['email'], $data['identificacion'],
+        $data['specialty'] ?? null, $passwordPlain, $data['id']
+    ]);
 
     $pdo->prepare("UPDATE usuario SET email=?, nombre=? WHERE id_referencia=? AND rol='profesor'")
         ->execute([$data['email'], $data['name'], $data['id']]);
+
+    if ($passwordPlain) {
+        $newHash = password_hash($passwordPlain, PASSWORD_BCRYPT, ['cost' => 12]);
+        $pdo->prepare("UPDATE usuario SET password_hash=? WHERE id_referencia=? AND rol='profesor'")
+            ->execute([$newHash, $data['id']]);
+    }
 
     sendSuccess(["message" => "Profesor actualizado"]);
 }

@@ -29,7 +29,8 @@ if ($method === 'GET') {
     $total = (int) $countStmt->fetchColumn();
 
     $stmt = $pdo->prepare("
-        SELECT id, nombre AS name, email, identificacion, grado AS grade, seccion
+        SELECT id, nombre AS name, email, identificacion, grado AS grade,
+               seccion, password_inicial AS initialPassword
         FROM estudiante
         $whereSQL
         ORDER BY nombre ASC
@@ -45,6 +46,8 @@ if ($method === 'GET') {
         "total_pages" => (int) ceil($total / $perPage)
     ]);
 }
+
+
 elseif ($method === 'POST') {
     requireRole($pdo, 'admin');
     $data = json_decode(file_get_contents("php://input"), true);
@@ -56,11 +59,22 @@ elseif ($method === 'POST') {
         sendError("Ya existe un estudiante con ese email o identificación", 409);
     }
 
-    $stmt = $pdo->prepare("INSERT INTO estudiante (nombre, email, identificacion, grado, seccion) VALUES (?, ?, ?, ?, ?)");
-    $stmt->execute([$data['name'], $data['email'], $data['identificacion'], $data['grade'] ?? null, $data['seccion'] ?? null]);
+    // Contraseña: usar la personalizada si viene, si no usar la identificación
+    $passwordPlain = !empty($data['initialPassword'])
+        ? $data['initialPassword']
+        : $data['identificacion'];
+
+    $stmt = $pdo->prepare("
+        INSERT INTO estudiante (nombre, email, identificacion, grado, seccion, password_inicial)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ");
+    $stmt->execute([
+        $data['name'], $data['email'], $data['identificacion'],
+        $data['grade'] ?? null, $data['seccion'] ?? null, $passwordPlain
+    ]);
     $estudianteId = $pdo->lastInsertId();
 
-    $passwordHash = password_hash($data['identificacion'], PASSWORD_BCRYPT, ['cost' => 12]);
+    $passwordHash = password_hash($passwordPlain, PASSWORD_BCRYPT, ['cost' => 12]);
     $userCheck = $pdo->prepare("SELECT id FROM usuario WHERE email = ?");
     $userCheck->execute([$data['email']]);
     if (!$userCheck->fetch()) {
@@ -68,7 +82,11 @@ elseif ($method === 'POST') {
             ->execute([$data['email'], $passwordHash, $data['name'], $estudianteId]);
     }
 
-    sendCreated(["id" => $estudianteId, "message" => "Estudiante creado. Contraseña inicial: {$data['identificacion']}"]);
+    sendCreated([
+        "id"              => $estudianteId,
+        "initialPassword" => $passwordPlain,
+        "message"         => "Estudiante creado. Contraseña inicial: $passwordPlain"
+    ]);
 }
 
 elseif ($method === 'PUT') {
@@ -82,11 +100,27 @@ elseif ($method === 'PUT') {
         sendError("Ese email o identificación ya está en uso", 409);
     }
 
-    $pdo->prepare("UPDATE estudiante SET nombre=?, email=?, identificacion=?, grado=?, seccion=? WHERE id=?")
-        ->execute([$data['name'], $data['email'], $data['identificacion'], $data['grade'] ?? null, $data['seccion'] ?? null, $data['id']]);
+    // Si viene nueva contraseña, actualizar hash en usuario también
+    $passwordPlain = !empty($data['initialPassword']) ? $data['initialPassword'] : null;
+
+    $pdo->prepare("
+        UPDATE estudiante SET nombre=?, email=?, identificacion=?, grado=?, seccion=?,
+        password_inicial = COALESCE(?, password_inicial)
+        WHERE id=?
+    ")->execute([
+        $data['name'], $data['email'], $data['identificacion'],
+        $data['grade'] ?? null, $data['seccion'] ?? null,
+        $passwordPlain, $data['id']
+    ]);
 
     $pdo->prepare("UPDATE usuario SET email=?, nombre=? WHERE id_referencia=? AND rol='estudiante'")
         ->execute([$data['email'], $data['name'], $data['id']]);
+
+    if ($passwordPlain) {
+        $newHash = password_hash($passwordPlain, PASSWORD_BCRYPT, ['cost' => 12]);
+        $pdo->prepare("UPDATE usuario SET password_hash=? WHERE id_referencia=? AND rol='estudiante'")
+            ->execute([$newHash, $data['id']]);
+    }
 
     sendSuccess(["message" => "Estudiante actualizado"]);
 }

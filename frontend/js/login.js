@@ -18,7 +18,7 @@ document.getElementById('loginForm').addEventListener('submit', async function (
             return;
         }
 
-        // Login ahora devuelve { success, data: { token, rol, nombre, id_referencia } }
+        // Login devuelve { success, data: { token, rol, nombre, id_referencia } }
         const data = json.data;
 
         localStorage.setItem('currentUser', JSON.stringify({
@@ -26,9 +26,16 @@ document.getElementById('loginForm').addEventListener('submit', async function (
             token:         data.token,
             rol:           data.rol,
             nombre:        data.nombre,
-            id_referencia: data.id_referencia
+            id_referencia: data.id_referencia,
+            password_cambiada:  data.password_cambiada
         }));
 
+        // Si no ha cambiado la contraseña, redirigir al cambio
+        if (!data.password_cambiada) {
+            window.location.href = 'cambiar_password.html';
+            return;
+        }
+        
         const routes = { admin: 'admin.html', profesor: 'profesor.html', estudiante: 'estudiante.html' };
         window.location.href = routes[data.rol];
 

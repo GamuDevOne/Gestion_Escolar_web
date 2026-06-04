@@ -53,6 +53,7 @@ sendSuccess([
     "token"         => $token,
     "rol"           => $user['rol'],
     "nombre"        => $user['nombre'],
-    "id_referencia" => $user['id_referencia']
+    "id_referencia" => $user['id_referencia'],
+    "password_cambiada" => (bool) $user['password_cambiada']
 ]);
 ?>
