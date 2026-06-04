@@ -1,0 +1,28 @@
+ALTER TABLE usuario ADD COLUMN preguntas_configuradas TINYINT(1) DEFAULT 0;
+
+CREATE TABLE pregunta_seguridad (
+  id INT NOT NULL AUTO_INCREMENT,
+  pregunta VARCHAR(255) NOT NULL,
+  PRIMARY KEY (id)
+);
+
+INSERT INTO pregunta_seguridad (pregunta) VALUES
+('¿Cuál es el nombre de tu primera mascota?'),
+('¿En qué ciudad naciste?'),
+('¿Cuál es el apellido de soltera de tu madre?'),
+('¿Cuál fue el nombre de tu primera escuela?'),
+('¿Cuál es tu comida favorita?'),
+('¿Cuál es el nombre de tu mejor amigo de infancia?'),
+('¿Cuál fue tu primer número de teléfono?'),
+('¿Cuál es el modelo de tu primer auto?');
+
+CREATE TABLE usuario_pregunta (
+  id INT NOT NULL AUTO_INCREMENT,
+  usuario_id INT NOT NULL,
+  pregunta_id INT NOT NULL,
+  respuesta_hash VARCHAR(255) NOT NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_usuario_pregunta (usuario_id, pregunta_id),
+  CONSTRAINT fk_up_usuario FOREIGN KEY (usuario_id) REFERENCES usuario(id) ON DELETE CASCADE,
+  CONSTRAINT fk_up_pregunta FOREIGN KEY (pregunta_id) REFERENCES pregunta_seguridad(id)
+);

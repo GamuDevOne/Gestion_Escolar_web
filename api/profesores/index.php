@@ -113,9 +113,15 @@ elseif ($method === 'PUT') {
         ->execute([$data['email'], $data['name'], $data['id']]);
 
     if ($passwordPlain) {
-        $newHash = password_hash($passwordPlain, PASSWORD_BCRYPT, ['cost' => 12]);
-        $pdo->prepare("UPDATE usuario SET password_hash=? WHERE id_referencia=? AND rol='profesor'")
-            ->execute([$newHash, $data['id']]);
+    $newHash = password_hash($passwordPlain, PASSWORD_BCRYPT, ['cost' => 12]);
+    $pdo->prepare("UPDATE usuario SET password_hash=?, password_cambiada=0, preguntas_configuradas=0 WHERE id_referencia=? AND rol='profesor'")
+        ->execute([$newHash, $data['id']]);
+    $usuarioStmt = $pdo->prepare("SELECT id FROM usuario WHERE id_referencia=? AND rol='profesor'");
+    $usuarioStmt->execute([$data['id']]);
+    $usuarioId = $usuarioStmt->fetchColumn();
+    if ($usuarioId) {
+        $pdo->prepare("DELETE FROM usuario_pregunta WHERE usuario_id=?")->execute([$usuarioId]);
+        }
     }
 
     sendSuccess(["message" => "Profesor actualizado"]);
