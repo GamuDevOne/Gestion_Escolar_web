@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 04-06-2026 a las 00:06:26
+-- Tiempo de generación: 04-06-2026 a las 07:11:54
 -- Versión del servidor: 10.4.32-MariaDB
 -- Versión de PHP: 8.2.12
 
@@ -54,15 +54,16 @@ CREATE TABLE `estudiante` (
   `email` varchar(100) NOT NULL,
   `identificacion` varchar(20) NOT NULL,
   `grado` varchar(10) DEFAULT NULL,
-  `seccion` varchar(10) DEFAULT NULL
+  `seccion` varchar(10) DEFAULT NULL,
+  `password_inicial` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Volcado de datos para la tabla `estudiante`
 --
 
-INSERT INTO `estudiante` (`id`, `nombre`, `email`, `identificacion`, `grado`, `seccion`) VALUES
-(2, 'Escott Pilgrim', 'escotpilgrim@gmail.com', '9021', '10°', 'B');
+INSERT INTO `estudiante` (`id`, `nombre`, `email`, `identificacion`, `grado`, `seccion`, `password_inicial`) VALUES
+(2, 'Escott Pilgrim', 'escotpilgrim@gmail.com', '9021', '10°', 'B', 'asucar');
 
 -- --------------------------------------------------------
 
@@ -83,7 +84,8 @@ CREATE TABLE `materia` (
 --
 
 INSERT INTO `materia` (`id`, `codigo`, `nombre`, `creditos`, `profesor_id`) VALUES
-(1, 'MT01', 'Ciencias Naturales', 3, 1);
+(1, 'CN01', 'Ciencias Naturales', 3, 1),
+(2, 'ESP01', 'Español', 3, NULL);
 
 -- --------------------------------------------------------
 
@@ -129,7 +131,12 @@ CREATE TABLE `nota` (
 
 INSERT INTO `nota` (`id`, `estudiante_id`, `materia_id`, `profesor_id`, `tipo`, `puntaje`, `trimestre`, `comentario`, `fecha_registro`) VALUES
 (1, 2, 1, 1, 'taller', 4.6, 'I Trimestre', 'prueba', '2026-06-01 01:40:52'),
-(2, 2, 1, 1, 'parcial', 3.4, 'I Trimestre', 'Revisar la ultima parte', '2026-06-01 01:42:11');
+(2, 2, 1, 1, 'parcial', 3.4, 'I Trimestre', 'Revisar la ultima parte', '2026-06-01 01:42:11'),
+(3, 2, 1, 1, 'parcial', 3.4, 'I Trimestre', 'No leyó jajajaja', '2026-06-03 22:38:39'),
+(4, 2, 1, 1, 'taller', 4.6, 'I Trimestre', NULL, '2026-06-03 22:38:53'),
+(5, 2, 1, 1, 'tarea', 5.0, 'I Trimestre', NULL, '2026-06-03 22:38:59'),
+(6, 2, 1, 1, 'tarea', 5.0, 'I Trimestre', NULL, '2026-06-03 22:39:05'),
+(7, 2, 1, 1, 'tarea', 3.7, 'I Trimestre', 'Faltó información', '2026-06-03 22:39:18');
 
 -- --------------------------------------------------------
 
@@ -157,15 +164,16 @@ CREATE TABLE `profesor` (
   `nombre` varchar(100) NOT NULL,
   `email` varchar(100) NOT NULL,
   `identificacion` varchar(20) NOT NULL,
-  `especialidad` varchar(100) DEFAULT NULL
+  `especialidad` varchar(100) DEFAULT NULL,
+  `password_inicial` varchar(100) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Volcado de datos para la tabla `profesor`
 --
 
-INSERT INTO `profesor` (`id`, `nombre`, `email`, `identificacion`, `especialidad`) VALUES
-(1, 'Jose Tobares', 'profesorTobares@gmail.com', '7070', 'Ciencias ');
+INSERT INTO `profesor` (`id`, `nombre`, `email`, `identificacion`, `especialidad`, `password_inicial`) VALUES
+(1, 'Jose Tobares', 'profesorTobares@gmail.com', '7070', 'Ciencias ', 'sal');
 
 -- --------------------------------------------------------
 
@@ -200,7 +208,23 @@ INSERT INTO `sesion` (`id`, `usuario_id`, `token`, `expires_at`, `activa`, `crea
 (11, 1, 'bbd32166ae99aea210896a4818bbb5266e43eb002ecf5ecb045bcdfe5014401f', '2026-06-03 04:28:28', 0, '2026-06-02 13:28:28'),
 (12, 2, '975d7600a58383d13979b0cf2e8edef50841bca9b41b2b1a98614b5c4de42386', '2026-06-03 04:39:01', 0, '2026-06-02 13:39:01'),
 (13, 3, '549fb953f6ba529903823c2e7d2cfd04ebbe6b39be84190bb63d5e79353a9ab8', '2026-06-03 04:49:14', 0, '2026-06-02 13:49:14'),
-(14, 1, 'd94989819fa3228e34221222af8fe353abbd86aa2825a3ab40f981ef2ecb6bdb', '2026-06-03 04:49:36', 0, '2026-06-02 13:49:36');
+(14, 1, 'd94989819fa3228e34221222af8fe353abbd86aa2825a3ab40f981ef2ecb6bdb', '2026-06-03 04:49:36', 0, '2026-06-02 13:49:36'),
+(15, 1, 'b78f72d40ab53b524393c87fd35bcef62a2c5935b90931d11584d30a63ebdff6', '2026-06-04 08:16:06', 0, '2026-06-03 17:16:06'),
+(16, 1, 'f7b2df69368a648220536758e9418c0c19dda8bda955e69989547f8a3fb28b57', '2026-06-04 08:32:29', 0, '2026-06-03 17:32:29'),
+(17, 1, '0648833853c6c5d190221cf93436cc124a14fa8e3462a7ab6cd2b2a359542b5d', '2026-06-04 08:44:21', 0, '2026-06-03 17:44:21'),
+(18, 2, '19093ec33bde43bdcd82d69a73e996d301e7f1bc28de566839b46464dea6c511', '2026-06-04 08:58:46', 0, '2026-06-03 17:58:46'),
+(19, 1, 'e74166cce1eaabe53a7427957255f6139a133191f51557a7cf2ba54512d6eae0', '2026-06-04 09:04:52', 0, '2026-06-03 18:04:52'),
+(20, 2, '6d0208525a0ce96937252677d29c71255a7fe18f4b351e822483e1c9dd317d30', '2026-06-04 09:05:42', 0, '2026-06-03 18:05:42'),
+(21, 1, '3ac209e36d92d796b5ccf7bd742087bd7292196233966e76152c127b147dbbdf', '2026-06-04 09:06:00', 0, '2026-06-03 18:06:00'),
+(22, 1, '2bfef502e318db63df51634c94e87acf0bad370ef093e0c30afbaaa6e41dd29d', '2026-06-04 09:30:01', 0, '2026-06-03 18:30:01'),
+(23, 1, '007493b57b2065b6a7cda57d4bf18732fff305f7bc7e27082cd6f5144b89e2e0', '2026-06-04 13:24:56', 0, '2026-06-03 22:24:56'),
+(24, 2, '71aafdcd2fb4cea4ca0ab2eead3efc02dd169eb9784d3abd0d67705cd900a9dc', '2026-06-04 13:33:15', 0, '2026-06-03 22:33:15'),
+(25, 1, '34b6a70ceac6369fe8ffd371ca315d566c605e85e2af47917dea7fd18500766e', '2026-06-04 13:36:52', 0, '2026-06-03 22:36:52'),
+(26, 3, 'eee328dbb11bdca305206d533b8b075594e41d0f9222cd9a604043c7c6296496', '2026-06-04 13:37:16', 0, '2026-06-03 22:37:16'),
+(27, 2, '6180436a661f4595737a151c8a589bc8b49e46f22bb07a7895d845e6a75cc667', '2026-06-04 13:42:21', 0, '2026-06-03 22:42:21'),
+(28, 1, 'eeb6adacbcda3182afe90e3e457bafb1f6e78a8975f81986e7ed59cf3fb28e6a', '2026-06-04 13:45:01', 0, '2026-06-03 22:45:01'),
+(29, 1, '76cbabb38f24f3e77937ec6d831982902d14075c870db1affd6c53cb4c0d20a5', '2026-06-04 13:57:25', 0, '2026-06-03 22:57:25'),
+(30, 1, 'b079c610544c39804796f0b15a9dbc22e784db1c4c00a0f13b997f31a2eee226', '2026-06-04 15:11:11', 1, '2026-06-04 00:11:11');
 
 -- --------------------------------------------------------
 
@@ -214,17 +238,18 @@ CREATE TABLE `usuario` (
   `password_hash` varchar(255) NOT NULL,
   `rol` enum('admin','profesor','estudiante') NOT NULL,
   `nombre` varchar(100) DEFAULT NULL,
-  `id_referencia` int(11) DEFAULT NULL
+  `id_referencia` int(11) DEFAULT NULL,
+  `password_cambiada` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Volcado de datos para la tabla `usuario`
 --
 
-INSERT INTO `usuario` (`id`, `email`, `password_hash`, `rol`, `nombre`, `id_referencia`) VALUES
-(1, 'admin@escuela.edu', '$2y$12$kxBNnam4GaKdpVnunJzqJej6KM4DqLtt9czVJH3YcIC.tjI4U6YTy', 'admin', 'Administrador', NULL),
-(2, 'escotpilgrim@gmail.com', '$2y$12$.wp5aBl9T4F/6hYAv/FwfeH5l67idbEx0LMSdc7V/5I2dqJjoUNpu', 'estudiante', 'Escott Pilgrim', 2),
-(3, 'profesorTobares@gmail.com', '$2y$12$hfgf5lvmcY2wPJVj35GYEe068ZwXuvRG23zh.u2T2..thq92tb2AC', 'profesor', 'Jose Tobares', 1);
+INSERT INTO `usuario` (`id`, `email`, `password_hash`, `rol`, `nombre`, `id_referencia`, `password_cambiada`) VALUES
+(1, 'admin@escuela.edu', '$2y$12$kxBNnam4GaKdpVnunJzqJej6KM4DqLtt9czVJH3YcIC.tjI4U6YTy', 'admin', 'Administrador', NULL, 0),
+(2, 'escotpilgrim@gmail.com', '$2y$12$zTB/newMGZwUfB2nvGTKYeA4z55MEEmkWxsWLtvQwOjXMnQ2gCEOG', 'estudiante', 'Escott Pilgrim', 2, 0),
+(3, 'profesorTobares@gmail.com', '$2y$12$krM6fLObOqTBpdrpoYsUIOjJykdIJy/O2RHOxsHczHDKnyeTCZVYK', 'profesor', 'Jose Tobares', 1, 0);
 
 --
 -- Índices para tablas volcadas
@@ -324,7 +349,7 @@ ALTER TABLE `estudiante`
 -- AUTO_INCREMENT de la tabla `materia`
 --
 ALTER TABLE `materia`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT de la tabla `matricula`
@@ -336,7 +361,7 @@ ALTER TABLE `matricula`
 -- AUTO_INCREMENT de la tabla `nota`
 --
 ALTER TABLE `nota`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT de la tabla `nota_auditoria`
@@ -354,7 +379,7 @@ ALTER TABLE `profesor`
 -- AUTO_INCREMENT de la tabla `sesion`
 --
 ALTER TABLE `sesion`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
 
 --
 -- AUTO_INCREMENT de la tabla `usuario`
