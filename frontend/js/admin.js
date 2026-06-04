@@ -54,6 +54,28 @@ function escapeHtml(str) {
 
 function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
+// ==================== CONTRASEÑA INICIAL ====================
+function generatePassword() {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let pass = '';
+    for (let i = 0; i < 5; i++) pass += chars[Math.floor(Math.random() * chars.length)];
+    return pass;
+}
+
+function regenPassword(inputId) {
+    const input = document.getElementById(inputId);
+    input.value = generatePassword();
+    input.readOnly = true;
+    input.classList.remove('password-editable');
+}
+
+function togglePasswordEdit(inputId) {
+    const input = document.getElementById(inputId);
+    input.readOnly = !input.readOnly;
+    input.classList.toggle('password-editable', !input.readOnly);
+    if (!input.readOnly) input.focus();
+}
+
 async function logout() {
     try { await apiFetch('/auth/logout.php', { method: 'POST' }); } catch (e) {}
     localStorage.removeItem('currentUser');
@@ -270,10 +292,11 @@ function renderStudents() {
     const tbody = document.getElementById('studentsTable');
     if (tbody) {
         tbody.innerHTML = students.length
-            ? students.map(s => `
+            ? students.map((s, i) => `
                 <tr>
-                    <td>${s.id}</td>
+                    <td>${((currentStudentPage - 1) * perPage) + i + 1}</td>
                     <td>${escapeHtml(s.identificacion || '—')}</td>
+                    <td><span class="badge password-badge">${escapeHtml(s.initialPassword || '—')}</span></td>
                     <td>${escapeHtml(s.name)}</td>
                     <td>${escapeHtml(s.email)}</td>
                     <td>${s.grade || '—'}</td>
@@ -284,7 +307,7 @@ function renderStudents() {
                     </td>
                 </tr>
             `).join('')
-            : '<tr class="empty-row"><td colspan="7">No hay estudiantes</td></tr>';
+            : '<tr class="empty-row"><td colspan="8">No hay estudiantes</td></tr>';
     }
     renderServerPagination('studentPagination', currentStudentPage, totalPages, studentTotal, perPage, 'changeStudentPage');
 }
@@ -292,6 +315,9 @@ function renderStudents() {
 function openStudentModal() {
     document.getElementById('studentForm').reset();
     document.getElementById('studentId').value = '';
+    document.getElementById('studentPassword').value = generatePassword();
+    document.getElementById('studentPassword').readOnly = true;
+    document.getElementById('studentPassword').classList.remove('password-editable');
     document.getElementById('studentModal').style.display = 'flex';
 }
 
@@ -300,6 +326,9 @@ function editStudent(id) {
     if (!s) return;
     document.getElementById('studentId').value             = s.id;
     document.getElementById('studentIdentificacion').value = s.identificacion || '';
+    document.getElementById('studentPassword').value       = s.initialPassword || generatePassword();
+    document.getElementById('studentPassword').readOnly    = true;
+    document.getElementById('studentPassword').classList.remove('password-editable');
     document.getElementById('studentName').value           = s.name;
     document.getElementById('studentEmail').value          = s.email;
     document.getElementById('studentGrade').value          = s.grade;
@@ -328,11 +357,12 @@ document.getElementById('studentForm')?.addEventListener('submit', async functio
     const id      = document.getElementById('studentId').value;
     const student = {
         ...(id ? { id: parseInt(id) } : {}),
-        name:           document.getElementById('studentName').value,
-        email:          document.getElementById('studentEmail').value,
-        identificacion: document.getElementById('studentIdentificacion').value.trim(),
-        grade:          document.getElementById('studentGrade').value,
-        seccion:        document.getElementById('studentSeccion').value.trim()
+        name:            document.getElementById('studentName').value,
+        email:           document.getElementById('studentEmail').value,
+        identificacion:  document.getElementById('studentIdentificacion').value.trim(),
+        grade:           document.getElementById('studentGrade').value,
+        seccion:         document.getElementById('studentSeccion').value.trim(),
+        initialPassword: document.getElementById('studentPassword').value.trim()
     };
     try {
         const res = await apiFetch('/estudiantes/', { method: id ? 'PUT' : 'POST', body: JSON.stringify(student) });
@@ -354,13 +384,15 @@ function renderTeachers() {
     const tbody = document.getElementById('professorsTable');
     if (tbody) {
         tbody.innerHTML = teachers.length
-            ? teachers.map(t => {
+            ? teachers.map((t, i) => {
                 const teacherSubjects = subjects
                     .filter(s => parseInt(s.teacherId) === t.id)
                     .map(s => s.name).join(', ') || 'Sin materias';
                 return `
                     <tr>
-                        <td>${t.id}</td>
+                        <td>${((currentProfessorPage - 1) * perPage) + i + 1}</td>
+                        <td>${escapeHtml(t.identificacion || '—')}</td>
+                        <td><span class="badge password-badge">${escapeHtml(t.initialPassword || '—')}</span></td>
                         <td>${escapeHtml(t.name)}</td>
                         <td>${escapeHtml(t.email)}</td>
                         <td>${escapeHtml(t.specialty)}</td>
@@ -372,7 +404,7 @@ function renderTeachers() {
                     </tr>
                 `;
             }).join('')
-            : '<tr class="empty-row"><td colspan="6">No hay profesores</td></tr>';
+            : '<tr class="empty-row"><td colspan="8">No hay profesores</td></tr>';
     }
     renderServerPagination('professorPagination', currentProfessorPage, totalPages, professorTotal, perPage, 'changeProfessorPage');
 }
@@ -381,6 +413,9 @@ function openProfessorModal() {
     document.getElementById('professorSubjects').innerHTML = subjects.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
     document.getElementById('professorForm').reset();
     document.getElementById('professorId').value = '';
+    document.getElementById('professorPassword').value = generatePassword();
+    document.getElementById('professorPassword').readOnly = true;
+    document.getElementById('professorPassword').classList.remove('password-editable');
     document.getElementById('professorModal').style.display = 'flex';
 }
 
@@ -392,6 +427,9 @@ function editTeacher(id) {
     ).join('');
     document.getElementById('professorId').value             = t.id;
     document.getElementById('professorIdentificacion').value = t.identificacion || '';
+    document.getElementById('professorPassword').value       = t.initialPassword || generatePassword();
+    document.getElementById('professorPassword').readOnly    = true;
+    document.getElementById('professorPassword').classList.remove('password-editable');
     document.getElementById('professorName').value           = t.name;
     document.getElementById('professorEmail').value          = t.email;
     document.getElementById('professorSpecialty').value      = t.specialty;
@@ -419,11 +457,12 @@ document.getElementById('professorForm')?.addEventListener('submit', async funct
     const id      = document.getElementById('professorId').value;
     const teacher = {
         ...(id ? { id: parseInt(id) } : {}),
-        name:           document.getElementById('professorName').value,
-        email:          document.getElementById('professorEmail').value,
-        identificacion: document.getElementById('professorIdentificacion').value.trim(),
-        specialty:      document.getElementById('professorSpecialty').value,
-        subjectIds:     []
+        name:            document.getElementById('professorName').value,
+        email:           document.getElementById('professorEmail').value,
+        identificacion:  document.getElementById('professorIdentificacion').value.trim(),
+        specialty:       document.getElementById('professorSpecialty').value,
+        initialPassword: document.getElementById('professorPassword').value.trim(),
+        subjectIds:      []
     };
     try {
         const res = await apiFetch('/profesores/', { method: id ? 'PUT' : 'POST', body: JSON.stringify(teacher) });

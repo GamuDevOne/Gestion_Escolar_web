@@ -608,7 +608,86 @@ body {
     border: 1px solid var(--parchment);
 }
 
-/* ========== RESPONSIVE ========== */
+
+/* ========== CAMPO CONTRASEÑA INICIAL ========== */
+.password-field-group {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.password-field-group .password-input {
+    flex: 1;
+    font-family: 'Courier New', monospace;
+    font-size: 15px;
+    letter-spacing: 0.1em;
+    background: rgba(250,246,238,0.5);
+    color: var(--ink);
+    border: 1px solid var(--parchment);
+    border-bottom: 2px solid var(--crimson);
+    border-radius: 2px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.password-field-group .password-input[readonly] {
+    background: rgba(240,232,213,0.4);
+    color: var(--ink-soft);
+    cursor: default;
+}
+
+.password-field-group .password-input.password-editable {
+    background: white;
+    border-bottom-color: var(--gold);
+    cursor: text;
+}
+
+.btn-pass-regen,
+.btn-pass-edit {
+    width: 34px;
+    height: 34px;
+    border-radius: 2px;
+    border: 1px solid rgba(201,168,76,0.4);
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.btn-pass-regen {
+    background: rgba(201,168,76,0.1);
+    color: #7A5C00;
+}
+
+.btn-pass-regen:hover {
+    background: var(--gold);
+    color: var(--ink);
+}
+
+.btn-pass-edit {
+    background: rgba(139,0,0,0.08);
+    color: var(--crimson);
+    border-color: rgba(139,0,0,0.3);
+}
+
+.btn-pass-edit:hover {
+    background: var(--crimson);
+    color: var(--gold-pale);
+}
+
+.password-badge {
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.08em;
+    font-size: 13px;
+    background: rgba(240,232,213,0.7);
+    border: 1px solid var(--parchment);
+    color: var(--ink-soft);
+}
+
 @media (max-width: 768px) {
     .sidebar { width: 72px; padding: 15px 8px; }
     .sidebar .logo,

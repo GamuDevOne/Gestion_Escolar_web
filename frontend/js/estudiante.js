@@ -153,7 +153,7 @@ function renderTrimestreSection(trimestre) {
         const grades = getGradesForSubjectTrimestre(subject.id, trimestre);
         const avg    = getAverageForSubjectTrimestre(subject.id, trimestre);
         if (avg !== null) { hasAnyGrade = true; trimestreTotal += parseFloat(avg); trimestreCount++; }
-        return renderSubjectRow(subject, grades, avg);
+        return renderSubjectRow(subject, grades, avg, trimestre);
     }).join('');
 
     const trimestreAvg = trimestreCount > 0 ? (trimestreTotal / trimestreCount).toFixed(1) : null;
@@ -175,7 +175,7 @@ function renderTrimestreSection(trimestre) {
                         <thead>
                             <tr>
                                 <th><i class="fas fa-book"></i> Materia</th>
-                                <th><i class="fas fa-pen"></i> Notas</th>
+                                <th><i class="fas fa-list"></i> Notas</th>
                                 <th><i class="fas fa-bullseye"></i> Promedio</th>
                                 <th><i class="fas fa-circle-check"></i> Estado</th>
                             </tr>
@@ -193,18 +193,12 @@ function renderTrimestreSection(trimestre) {
     `;
 }
 
-function renderSubjectRow(subject, grades, avg) {
-    const typeIcons  = { parcial: '<i class="fas fa-pen"></i>', taller: '<i class="fas fa-tools"></i>', tarea: '<i class="fas fa-home"></i>' };
-    const typeLabels = { parcial: 'Parcial', taller: 'Taller', tarea: 'Tarea' };
-
-    const gradesHtml = grades.length > 0
-        ? '<div class="grades-list">' + grades.map(g => `
-            <div class="grade-item ${g.type}" title="${escapeHtml(g.comment || typeLabels[g.type])}">
-                ${typeIcons[g.type] || ''} <span class="grade-score">${g.score}</span>
-                ${g.comment ? `<span class="grade-comment">(${escapeHtml(g.comment.substring(0, 20))}${g.comment.length > 20 ? '...' : ''})</span>` : ''}
-            </div>
-        `).join('') + '</div>'
-        : '<span class="no-grades"><i class="fas fa-minus-circle"></i> Sin notas</span>';
+function renderSubjectRow(subject, grades, avg, trimestre) {
+    const notasBtn = grades.length > 0
+        ? `<button class="btn-ver-notas" onclick="openGradesDetailModal(${subject.id}, '${escapeHtml(subject.name)}', '${trimestre}')">
+               <i class="fas fa-eye"></i> Ver notas
+           </button>`
+        : `<span class="no-grades"><i class="fas fa-minus-circle"></i> Sin notas</span>`;
 
     let statusHtml = '<span class="status-badge empty"><i class="fas fa-question-circle"></i> Sin definir</span>';
     if (avg !== null) {
@@ -216,11 +210,98 @@ function renderSubjectRow(subject, grades, avg) {
     return `
         <tr>
             <td class="subject-name">${escapeHtml(subject.name)}</td>
-            <td>${gradesHtml}</td>
+            <td>${notasBtn}</td>
             <td class="subject-average">${avg !== null ? `<span class="value">${avg}</span>` : '<span class="empty">S/N</span>'}</td>
             <td>${statusHtml}</td>
         </tr>
     `;
+}
+
+// ==================== MODAL DETALLE DE NOTAS ====================
+function openGradesDetailModal(subjectId, subjectName, trimestre) {
+    const grades = getGradesForSubjectTrimestre(subjectId, trimestre);
+
+    // Agrupar por tipo
+    const grouped = { parcial: [], taller: [], tarea: [] };
+    grades.forEach(g => {
+        if (grouped[g.type]) grouped[g.type].push(g);
+        else grouped['tarea'].push(g); // fallback
+    });
+
+    const typeConfig = {
+        parcial: { label: 'Parciales',   icon: 'fas fa-pen',   color: 'var(--crimson)' },
+        taller:  { label: 'Talleres',    icon: 'fas fa-tools', color: 'var(--gold)' },
+        tarea:   { label: 'Tareas',      icon: 'fas fa-home',  color: '#8a7055' }
+    };
+
+    let contentHtml = '';
+    for (const [type, items] of Object.entries(grouped)) {
+        if (items.length === 0) continue;
+        const cfg = typeConfig[type];
+        const typeAvg = (items.reduce((a, g) => a + g.score, 0) / items.length).toFixed(1);
+        contentHtml += `
+            <div class="gd-group">
+                <div class="gd-group-header" style="border-left-color:${cfg.color}">
+                    <span class="gd-group-title"><i class="${cfg.icon}"></i> ${cfg.label}</span>
+                    <span class="gd-group-avg" style="color:${cfg.color}">Promedio: ${typeAvg}</span>
+                </div>
+                <div class="gd-items">
+                    ${items.map(g => `
+                        <div class="gd-item">
+                            <div class="gd-item-left">
+                                <span class="gd-item-name">
+                                    ${g.comment ? escapeHtml(g.comment) : cfg.label.slice(0, -1) + ' ' + (items.indexOf(g) + 1)}
+                                </span>
+                                <span class="gd-item-date"><i class="fas fa-calendar-alt"></i> ${g.date || ''}</span>
+                            </div>
+                            <div class="gd-item-score" style="color:${cfg.color}">${g.score}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    const avg = (grades.reduce((a, g) => a + g.score, 0) / grades.length).toFixed(1);
+    const isApproved = parseFloat(avg) >= 3;
+
+    const modalHtml = `
+        <div class="gd-modal-overlay" id="gradesDetailOverlay" onclick="closeGradesDetailModal(event)">
+            <div class="gd-modal">
+                <button class="gd-close" onclick="closeGradesDetailModal(null)"><i class="fas fa-times"></i></button>
+                <div class="gd-header">
+                    <div class="gd-subject-name"><i class="fas fa-book"></i> ${escapeHtml(subjectName)}</div>
+                    <div class="gd-trimestre"><i class="fas fa-calendar-alt"></i> ${trimestre}</div>
+                    <div class="gd-avg-badge ${isApproved ? 'approved' : 'failed'}">
+                        <span class="gd-avg-label">Promedio</span>
+                        <span class="gd-avg-value">${avg}</span>
+                        <span class="gd-avg-status">${isApproved ? '<i class="fas fa-check"></i> Aprobado' : '<i class="fas fa-clock"></i> En proceso'}</span>
+                    </div>
+                </div>
+                <div class="gd-body">
+                    ${contentHtml}
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Insertar en el DOM y mostrar
+    const existing = document.getElementById('gradesDetailOverlay');
+    if (existing) existing.remove();
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    // Forzar reflow para animación
+    requestAnimationFrame(() => {
+        document.getElementById('gradesDetailOverlay').classList.add('visible');
+    });
+}
+
+function closeGradesDetailModal(event) {
+    if (event && event.target.id !== 'gradesDetailOverlay') return;
+    const overlay = document.getElementById('gradesDetailOverlay');
+    if (overlay) {
+        overlay.classList.remove('visible');
+        overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+    }
 }
 
 // ==================== COMENTARIOS ====================
