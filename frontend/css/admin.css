@@ -381,59 +381,6 @@ body {
     margin-bottom: 20px;
 }
 
-/* ========== MODAL ========== */
-.modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(26,5,5,0.7);
-    -webkit-backdrop-filter: blur(4px);
-    backdrop-filter: blur(4px);
-    z-index: 1000;
-    align-items: center;
-    justify-content: center;
-}
-
-.modal-content {
-    background: var(--ivory);
-    border-radius: 2px;
-    padding: 36px 32px;
-    width: 90%;
-    max-width: 460px;
-    position: relative;
-    border: 1px solid var(--gold);
-    box-shadow: 0 30px 60px rgba(0,0,0,0.4), inset 0 1px 0 rgba(201,168,76,0.2);
-    animation: modalFade 0.3s ease;
-}
-
-.modal-content::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--crimson-deep), var(--gold), var(--crimson-mid), var(--gold), var(--crimson-deep));
-}
-
-@keyframes modalFade {
-    from { opacity: 0; transform: translateY(-20px) scale(0.97); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.modal-content h3 {
-    font-family: 'Cinzel', serif;
-    font-size: 18px;
-    color: var(--crimson-deep);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    margin-bottom: 24px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid var(--parchment);
-}
 
 .close {
     position: absolute;
@@ -696,4 +643,101 @@ body {
     .nav-btn { text-align: center; font-size: 12px; padding: 12px 0; justify-content: center; }
     .nav-btn i { margin-right: 0 !important; width: auto; }
     .nav-btn span { display: none; }
+}
+
+/* ========== MODAL FIX - EVITAR FONDO BLANCO ========== */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(26, 5, 5, 0.85);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.show,
+.modal[style*="display: flex"] {
+    display: flex !important;
+}
+
+.modal-content {
+    background: var(--ivory);
+    border-radius: 8px;
+    padding: 30px;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+    border: 1px solid var(--gold);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.modal-content .close {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    color: var(--gold);
+    background: none;
+    border: none;
+    line-height: 1;
+}
+
+.modal-content .close:hover {
+    color: var(--crimson);
+}
+
+/* Botón de cambiar contraseña (sin ser nav-btn) */
+.btn-cambiar-pass {
+    background: transparent;
+    border: 1px solid rgba(139,0,0,0.4);
+    padding: 13px 18px;
+    border-radius: 2px;
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    color: rgba(230,210,180,0.75);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+.btn-cambiar-pass i {
+    width: 18px;
+    color: var(--gold);
+    opacity: 0.6;
+}
+
+.btn-cambiar-pass:hover {
+    background: rgba(139,0,0,0.3);
+    color: var(--gold-light);
+    border-color: var(--crimson);
+}
+
+.btn-cambiar-pass:hover i {
+    opacity: 1;
 }

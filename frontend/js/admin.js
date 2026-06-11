@@ -4,6 +4,51 @@ if (!currentUser || currentUser.rol !== 'admin') {
     window.location.href = 'index.html';
 }
 
+// ==================== FUNCIONES GLOBALES ====================
+window.closeModal = function(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+        modal.classList.remove('show');
+    }
+};
+
+window.openModal = function(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        modal.classList.add('show');
+    } else {
+        Swal.fire('Error', 'No se pudo abrir el modal', 'error');
+    }
+};
+
+// Cerrar modal con ESC
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => {
+            if (modal.style.display === 'flex') {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        });
+    }
+});
+
+// Cerrar modal si se hace clic fuera del contenido (UN SOLO LISTENER)
+window.addEventListener('click', function(event) {
+    const modals = document.querySelectorAll('.modal');
+    modals.forEach(modal => {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+    });
+});
+
 document.addEventListener('DOMContentLoaded', () => {
     const nameEl = document.getElementById('adminName');
     if (nameEl) nameEl.textContent = currentUser.nombre || 'Administrador';
@@ -22,6 +67,7 @@ let currentProfessorPage  = 1;
 let currentSubjectPage    = 1;
 let currentEnrollmentPage = 1;
 let perPage = 10;
+let currentActiveView = 'dashboard';
 
 let studentSearch    = '';
 let professorSearch  = '';
@@ -52,13 +98,11 @@ function escapeHtml(str) {
     return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m]));
 }
 
-function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-
 // ==================== CONTRASEÑA INICIAL ====================
 function generatePassword() {
     const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let pass = '';
-    for (let i = 0; i < 5; i++) pass += chars[Math.floor(Math.random() * chars.length)];
+    for (let i = 0; i < 6; i++) pass += chars[Math.floor(Math.random() * chars.length)];
     return pass;
 }
 
@@ -128,7 +172,7 @@ async function loadStudentsPage() {
     const data = json.data ?? json;
     students     = data.items ?? data;
     studentTotal = data.total ?? students.length;
-    renderStudents();
+    if (currentActiveView === 'students') renderStudents();
     updateStats();
 }
 
@@ -142,7 +186,7 @@ async function loadProfessorsPage() {
     teachers       = data.items ?? data;
     professorTotal = data.total ?? teachers.length;
     teachers.forEach(t => { if (!t.subjectIds) t.subjectIds = []; });
-    renderTeachers();
+    if (currentActiveView === 'professors') renderTeachers();
     updateStats();
 }
 
@@ -155,7 +199,7 @@ async function loadSubjectsPage() {
     const data = json.data ?? json;
     subjects     = data.items ?? data;
     subjectTotal = data.total ?? subjects.length;
-    renderSubjects();
+    if (currentActiveView === 'subjects') renderSubjects();
     updateStats();
 }
 
@@ -168,7 +212,7 @@ async function loadEnrollmentsPage() {
     const data = json.data ?? json;
     enrollments      = data.items ?? data;
     enrollmentTotal  = data.total ?? enrollments.length;
-    renderEnrollments();
+    if (currentActiveView === 'enrollments') renderEnrollments();
     updateStats();
 }
 
@@ -223,17 +267,18 @@ function renderServerPagination(paginationId, currentPage, totalPages, total, pe
 function changePerPage(paginationId, value) {
     perPage = parseInt(value);
     currentStudentPage = currentProfessorPage = currentSubjectPage = currentEnrollmentPage = 1;
-    loadStudentsPage();
-    loadProfessorsPage();
-    loadSubjectsPage();
-    loadEnrollmentsPage();
+    
+    if (currentActiveView === 'students') loadStudentsPage();
+    else if (currentActiveView === 'professors') loadProfessorsPage();
+    else if (currentActiveView === 'subjects') loadSubjectsPage();
+    else if (currentActiveView === 'enrollments') loadEnrollmentsPage();
 }
 
 function refreshAllViews() {
-    renderStudents();
-    renderTeachers();
-    renderSubjects();
-    renderEnrollments();
+    if (currentActiveView === 'students') renderStudents();
+    else if (currentActiveView === 'professors') renderTeachers();
+    else if (currentActiveView === 'subjects') renderSubjects();
+    else if (currentActiveView === 'enrollments') renderEnrollments();
     updateStats();
 }
 
@@ -304,8 +349,8 @@ function renderStudents() {
                     <td>
                         <button class="btn-edit"   onclick="editStudent(${s.id})"><i class="fas fa-edit"></i></button>
                         <button class="btn-danger" onclick="deleteStudent(${s.id})"><i class="fas fa-trash"></i></button>
-                    </td>
-                </tr>
+                     </td>
+                 </tr>
             `).join('')
             : '<tr class="empty-row"><td colspan="8">No hay estudiantes</td></tr>';
     }
@@ -355,6 +400,13 @@ async function deleteStudent(id) {
 document.getElementById('studentForm')?.addEventListener('submit', async function (e) {
     e.preventDefault();
     const id      = document.getElementById('studentId').value;
+    const password = document.getElementById('studentPassword').value.trim();
+    
+    if (password.length < 6) {
+        Swal.fire('Error', 'La contraseña debe tener al menos 6 caracteres', 'error');
+        return;
+    }
+    
     const student = {
         ...(id ? { id: parseInt(id) } : {}),
         name:            document.getElementById('studentName').value,
@@ -362,7 +414,7 @@ document.getElementById('studentForm')?.addEventListener('submit', async functio
         identificacion:  document.getElementById('studentIdentificacion').value.trim(),
         grade:           document.getElementById('studentGrade').value,
         seccion:         document.getElementById('studentSeccion').value.trim(),
-        initialPassword: document.getElementById('studentPassword').value.trim()
+        initialPassword: password
     };
     try {
         const res = await apiFetch('/estudiantes/', { method: id ? 'PUT' : 'POST', body: JSON.stringify(student) });
@@ -400,8 +452,8 @@ function renderTeachers() {
                         <td>
                             <button class="btn-edit"   onclick="editTeacher(${t.id})"><i class="fas fa-edit"></i></button>
                             <button class="btn-danger" onclick="deleteTeacher(${t.id})"><i class="fas fa-trash"></i></button>
-                        </td>
-                    </tr>
+                         </td>
+                     </tr>
                 `;
             }).join('')
             : '<tr class="empty-row"><td colspan="8">No hay profesores</td></tr>';
@@ -455,13 +507,20 @@ async function deleteTeacher(id) {
 document.getElementById('professorForm')?.addEventListener('submit', async function (e) {
     e.preventDefault();
     const id      = document.getElementById('professorId').value;
+    const password = document.getElementById('professorPassword').value.trim();
+    
+    if (password.length < 6) {
+        Swal.fire('Error', 'La contraseña debe tener al menos 6 caracteres', 'error');
+        return;
+    }
+    
     const teacher = {
         ...(id ? { id: parseInt(id) } : {}),
         name:            document.getElementById('professorName').value,
         email:           document.getElementById('professorEmail').value,
         identificacion:  document.getElementById('professorIdentificacion').value.trim(),
         specialty:       document.getElementById('professorSpecialty').value,
-        initialPassword: document.getElementById('professorPassword').value.trim(),
+        initialPassword: password,
         subjectIds:      []
     };
     try {
@@ -496,8 +555,8 @@ function renderSubjects() {
                         <td>
                             <button class="btn-edit"   onclick="editSubject(${s.id})"><i class="fas fa-edit"></i></button>
                             <button class="btn-danger" onclick="deleteSubject(${s.id})"><i class="fas fa-trash"></i></button>
-                        </td>
-                    </tr>
+                         </td>
+                     </tr>
                 `;
             }).join('')
             : '<tr class="empty-row"><td colspan="6">No hay materias</td></tr>';
@@ -583,7 +642,7 @@ function renderEnrollments() {
                     <td>${escapeHtml(e.teacherName || 'Sin asignar')}</td>
                     <td>${e.enrollmentDate || '—'}</td>
                     <td><button class="btn-danger" onclick="deleteEnrollment(${e.id})"><i class="fas fa-trash"></i></button></td>
-                </tr>
+                 </tr>
             `).join('')
             : '<tr class="empty-row"><td colspan="6">No hay matrículas</td></tr>';
     }
@@ -657,12 +716,57 @@ document.getElementById('enrollmentForm')?.addEventListener('submit', async func
     } catch (error) { Swal.fire('Error', error.message, 'error'); }
 });
 
-// ==================== NAVEGACIÓN ====================
+// ==================== CAMBIO CONTRASEÑA ====================
+function openChangePasswordModal() {
+    document.getElementById('changePasswordForm').reset();
+    document.getElementById('changePasswordModal').style.display = 'flex';
+}
+
+document.getElementById('changePasswordForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const actual    = document.getElementById('cpActual').value;
+    const nueva     = document.getElementById('cpNueva').value;
+    const confirmar = document.getElementById('cpConfirmar').value;
+
+    if (nueva !== confirmar) {
+        Swal.fire('Error', 'Las contraseñas nuevas no coinciden', 'error');
+        return;
+    }
+    if (nueva.length < 6) {
+        Swal.fire('Error', 'La nueva contraseña debe tener al menos 6 caracteres', 'error');
+        return;
+    }
+
+    try {
+        const res  = await apiFetch('/auth/cambiar_password.php', {
+            method: 'POST',
+            body: JSON.stringify({ password_actual: actual, password_nueva: nueva })
+        });
+        const json = await res.json();
+        if (res.ok) {
+            const user = JSON.parse(localStorage.getItem('currentUser'));
+            user.password_cambiada = true;
+            localStorage.setItem('currentUser', JSON.stringify(user));
+            closeModal('changePasswordModal');
+            Swal.fire({ title: '¡Contraseña actualizada!', icon: 'success', timer: 1500, showConfirmButton: false });
+        } else {
+            Swal.fire('Error', json.error || 'No se pudo actualizar', 'error');
+        }
+    } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+    }
+});
+
+// ==================== NAVEGACIÓN (CORREGIDO) ====================
 document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.addEventListener('click', function () {
+        // IMPORTANTE: Si el botón no tiene data-view, ignorar (evita error con botón "Cambiar contraseña")
+        if (!this.dataset.view) return;
+        
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
         this.classList.add('active');
         const view = this.dataset.view;
+        currentActiveView = view;
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById(`${view}View`).classList.add('active');
         if (view === 'enrollments') loadEnrollmentsPage();

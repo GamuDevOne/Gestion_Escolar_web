@@ -15,28 +15,70 @@
         <div class="login-card">
             <div class="decorative-ribbon"></div>
             <div class="login-header">
-                
                 <h1>Gestión Escolar</h1>
-                <p>Sistema de Calificaciones </p>
+                <p>Sistema de Calificaciones</p>
             </div>
             <form id="loginForm">
                 <div class="input-group">
-                    <label> Correo electrónico</label>
+                    <label>Correo electrónico</label>
                     <input type="email" id="email" placeholder="tucorreo@escuela.edu" required>
                 </div>
                 <div class="input-group">
-                    <label> Contraseña</label>
+                    <label>Contraseña</label>
                     <input type="password" id="password" placeholder="••••••••" required>
                 </div>
-                <button type="submit" class="login-btn"> Iniciar sesión</button>
+                <button type="submit" class="login-btn">Iniciar sesión</button>
             </form>
+            
+            <!-- NUEVO: Enlace para recuperar contraseña -->
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="#" onclick="showRecoveryModal()" style="color: var(--gold); font-size: 13px; font-family: 'Cinzel', serif; text-decoration: none;">
+                    <i class="fas fa-key"></i> ¿Olvidaste tu contraseña?
+                </a>
+            </div>
+            
             <p class="demo-hint"> Demo: admin@escuela.edu / contraseña: admin123<br>
             profesor@escuela.edu / cualquier<br>
             estudiante@escuela.edu / cualquier</p>
-           
         </div>
     </div>
 
+       <!-- MODAL RECUPERAR CONTRASEÑA CORREGIDO -->
+    <div id="recoveryModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <button type="button" class="close" onclick="closeRecoveryModal()">&times;</button>
+            <h3><i class="fas fa-key"></i> Recuperar Contraseña</h3>
+           <form id="recoveryForm" onsubmit="return submitRecoveryForm(event)">
+                <div id="step1">
+                    <div class="input-group">
+                        <label><i class="fas fa-id-card"></i> Número de Identificación</label>
+                        <input type="text" id="recoveryIdentificacion" placeholder="Ej: 1234567890" required>
+                    </div>
+                    <button type="button" class="login-btn" onclick="checkUserAndLoadQuestions()" style="width:100%; margin-top:10px;">
+                        <i class="fas fa-search"></i> Verificar usuario
+                    </button>
+                </div>
+                <div id="step2" style="display: none;">
+                    <div id="preguntaRecuperacion"></div>
+                    <div class="input-group" style="margin-top: 15px;">
+                        <label><i class="fas fa-pen"></i> Tu respuesta</label>
+                        <input type="text" id="respuestaSeguridad" placeholder="Escribe tu respuesta aquí" required>
+                    </div>
+                    <div class="input-group" style="margin-top: 15px;">
+                        <label><i class="fas fa-lock"></i> Nueva Contraseña</label>
+                        <input type="password" id="newPassword" placeholder="Mínimo 6 caracteres" required>
+                    </div>
+                    <div class="input-group">
+                        <label><i class="fas fa-check-circle"></i> Confirmar Nueva Contraseña</label>
+                        <input type="password" id="confirmNewPassword" placeholder="Repite la nueva contraseña" required>
+                    </div>
+                    <button type="submit" class="login-btn" style="width:100%; margin-top:15px;">
+                        <i class="fas fa-save"></i> Cambiar Contraseña
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
     <script src="js/api.js"></script>
     <script src="js/login.js"></script>
 </body>

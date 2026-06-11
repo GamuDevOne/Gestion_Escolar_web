@@ -284,3 +284,191 @@ body::after {
     letter-spacing: 0.4em;
     display: block;
 }
+
+
+
+.wide-card {
+max-width: 600px;
+width: 95%;
+}
+/* Estilos para selects dentro del formulario de preguntas */
+.login-card select {
+width: 100%;
+padding: 12px 16px;
+border: 1px solid var(--parchment, #ccc);
+border-radius: 4px;
+font-family: 'Quicksand', sans-serif;
+font-size: 14px;
+background: #fff;
+color: var(--ink, #333);
+outline: none;
+transition: border-color 0.2s;
+}
+.login-card select:focus {
+border-color: var(--crimson, #8B0000);
+}
+
+
+/* ========== PREGUNTAS DE SEGURIDAD - LAYOUT MEJORADO ========== */
+.preguntas-card {
+    max-width: 950px;
+    width: 95%;
+    padding: 40px 44px;
+}
+
+.preguntas-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 25px;
+    margin-top: 15px;
+}
+
+.pregunta-grupo {
+    background: rgba(245, 230, 184, 0.08);
+    border: 1px solid rgba(201, 168, 76, 0.2);
+    border-radius: 4px;
+    padding: 20px;
+    transition: all 0.3s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.pregunta-grupo:hover {
+    background: rgba(245, 230, 184, 0.12);
+    border-color: rgba(201, 168, 76, 0.35);
+    transform: translateY(-2px);
+}
+
+.pregunta-grupo .input-group {
+    margin-bottom: 0;
+}
+
+.pregunta-grupo .input-group:first-child {
+    margin-bottom: 18px;
+}
+
+.pregunta-grupo label {
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--crimson);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.pregunta-grupo select,
+.pregunta-grupo input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--parchment);
+    border-bottom: 2px solid var(--crimson);
+    border-radius: 2px;
+    font-family: 'EB Garamond', serif;
+    font-size: 14px;
+    background: rgba(250, 246, 238, 0.6);
+    transition: all 0.2s ease;
+}
+
+.pregunta-grupo select:focus,
+.pregunta-grupo input:focus {
+    border-bottom-color: var(--gold);
+    background: white;
+    outline: none;
+}
+
+.pregunta-grupo select {
+    cursor: pointer;
+}
+
+.pregunta-grupo input {
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.03em;
+}
+
+/* Responsive para tablets */
+@media (max-width: 850px) {
+    .preguntas-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+    
+    .preguntas-card {
+        padding: 30px 25px;
+    }
+}
+
+/* Responsive para móviles */
+@media (max-width: 600px) {
+    .preguntas-grid {
+        grid-template-columns: 1fr;
+        gap: 18px;
+    }
+    
+    .preguntas-card {
+        padding: 25px 20px;
+        max-width: 95%;
+    }
+    
+    .pregunta-grupo {
+        padding: 16px;
+    }
+    
+    .login-header h1 {
+        font-size: 20px;
+    }
+    
+    .login-header p {
+        font-size: 13px;
+    }
+}
+
+
+
+/* Estilos para el modal de recuperación */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(26, 5, 5, 0.8);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: var(--ivory);
+    border-radius: 4px;
+    padding: 30px;
+    max-width: 450px;
+    width: 90%;
+    position: relative;
+    border: 1px solid var(--gold);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+}
+
+.modal-content h3 {
+    font-family: 'Cinzel', serif;
+    color: var(--crimson-deep);
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--gold);
+}
+
+.close:hover {
+    color: var(--crimson);
+}

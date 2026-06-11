@@ -10,6 +10,16 @@ let currentSubjectId       = null;
 let currentStudentForModal = null;
 let currentTrimestre       = 'I Trimestre';
 
+
+window.closeModal = function(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.style.display = 'none';
+};
+
+window.openChangePasswordModal = function() {
+    document.getElementById('changePasswordForm').reset();
+    document.getElementById('changePasswordModal').style.display = 'flex';
+};
 // ==================== NORMALIZACIÓN ====================
 function normalizeGrade(g) {
     return {
@@ -45,6 +55,12 @@ async function loadData() {
         window.location.href = 'index.html';
         return;
     }
+    
+    // Verificar si debe cambiar contraseña
+    if (!currentTeacher.password_cambiada && !currentTeacher.password_skipped) {
+        window.location.href = 'cambiar_password.html';
+        return;
+    }
 
     document.getElementById('teacherName').textContent = currentTeacher.nombre || 'Profesor';
     document.getElementById('welcomeName').textContent = currentTeacher.nombre || 'Profesor';
@@ -57,34 +73,31 @@ async function loadData() {
             apiFetch('/comentarios/')
         ]);
 
-        if (!subjectsRes.ok)    throw new Error('Error cargando materias');
+        if (!subjectsRes.ok) throw new Error('Error cargando materias');
         if (!enrollmentsRes.ok) throw new Error('Error cargando matrículas');
-        if (!gradesRes.ok)      throw new Error('Error cargando notas');
-        if (!commentsRes.ok)    throw new Error('Error cargando comentarios');
+        if (!gradesRes.ok) throw new Error('Error cargando notas');
+        if (!commentsRes.ok) throw new Error('Error cargando comentarios');
 
-        const subjectsJson    = await subjectsRes.json();
+        const subjectsJson = await subjectsRes.json();
         const enrollmentsJson = await enrollmentsRes.json();
-        const gradesJson      = await gradesRes.json();
-        const commentsJson    = await commentsRes.json();
+        const gradesJson = await gradesRes.json();
+        const commentsJson = await commentsRes.json();
 
-        const allSubjects    = subjectsJson.data    ?? subjectsJson;
+        const allSubjects = subjectsJson.data ?? subjectsJson;
         const allEnrollments = enrollmentsJson.data ?? enrollmentsJson;
-        const allGrades      = gradesJson.data      ?? gradesJson;
-        myComments           = commentsJson.data    ?? commentsJson;
+        const allGrades = gradesJson.data ?? gradesJson;
+        myComments = commentsJson.data ?? commentsJson;
 
-        // El servidor ya filtra matrículas y notas por profesor.
-        // Materias: filtrar client-side las propias.
-        mySubjects    = allSubjects.filter(s => parseInt(s.teacherId) === currentTeacher.id_referencia);
+        mySubjects = allSubjects.filter(s => parseInt(s.teacherId) === currentTeacher.id_referencia);
         myEnrollments = allEnrollments.map(normalizeEnrollment);
-        myGrades      = allGrades.map(normalizeGrade);
+        myGrades = allGrades.map(normalizeGrade);
 
-        // Construir mapa de estudiantes únicos desde las matrículas
         const studentMap = {};
         myEnrollments.forEach(e => {
             if (!studentMap[e.studentId]) {
                 studentMap[e.studentId] = {
-                    id:    e.studentId,
-                    name:  e.studentName,
+                    id: e.studentId,
+                    name: e.studentName,
                     grade: e.studentGrade,
                     email: e.studentEmail
                 };
@@ -505,9 +518,52 @@ function renderComments() {
     `).join('');
 }
 
+function openChangePasswordModal() {
+    document.getElementById('changePasswordForm').reset();
+    document.getElementById('changePasswordModal').style.display = 'flex';
+}
+
+document.getElementById('changePasswordForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const actual    = document.getElementById('cpActual').value;
+    const nueva     = document.getElementById('cpNueva').value;
+    const confirmar = document.getElementById('cpConfirmar').value;
+
+    if (nueva !== confirmar) {
+        Swal.fire('Error', 'Las contraseñas nuevas no coinciden', 'error');
+        return;
+    }
+    if (nueva.length < 6) {
+        Swal.fire('Error', 'La nueva contraseña debe tener al menos 6 caracteres', 'error');
+        return;
+    }
+
+    try {
+        const res  = await apiFetch('/auth/cambiar_password.php', {
+            method: 'POST',
+            body: JSON.stringify({ password_actual: actual, password_nueva: nueva })
+        });
+        const json = await res.json();
+        if (res.ok) {
+            const user = JSON.parse(localStorage.getItem('currentUser'));
+            user.password_cambiada = true;
+            localStorage.setItem('currentUser', JSON.stringify(user));
+            closeModal('changePasswordModal');
+            Swal.fire({ title: '¡Contraseña actualizada!', icon: 'success', timer: 1500, showConfirmButton: false });
+        } else {
+            Swal.fire('Error', json.error || 'No se pudo actualizar', 'error');
+        }
+    } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+    }
+});
+
 // ==================== NAVEGACIÓN ====================
 document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.addEventListener('click', function () {
+        // Ignorar botones que no tengan data-view (como el de cambiar contraseña)
+        if (!this.dataset.view) return;
+        
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
         this.classList.add('active');
         const view = this.dataset.view;

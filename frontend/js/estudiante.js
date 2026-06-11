@@ -6,11 +6,29 @@ let mySubjects     = [];
 
 const TRIMESTRES = ['I Trimestre', 'II Trimestre', 'III Trimestre'];
 
+// Función global para cerrar modal
+window.closeModal = function(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.style.display = 'none';
+};
+
+// Función global para abrir modal de cambio de contraseña
+window.openChangePasswordModal = function() {
+    document.getElementById('changePasswordForm').reset();
+    document.getElementById('changePasswordModal').style.display = 'flex';
+};
+
 // ==================== CARGA DE DATOS ====================
 async function loadData() {
     currentStudent = JSON.parse(localStorage.getItem('currentUser'));
+    
     if (!currentStudent || currentStudent.rol !== 'estudiante') {
         window.location.href = 'index.html';
+        return;
+    }
+    
+    if (!currentStudent.password_cambiada && !currentStudent.password_skipped) {
+        window.location.href = 'cambiar_password.html';
         return;
     }
 
@@ -25,27 +43,26 @@ async function loadData() {
         ]);
 
         if (!enrollmentsRes.ok) throw new Error('Error cargando matrículas');
-        if (!gradesRes.ok)      throw new Error('Error cargando notas');
-        if (!subjectsRes.ok)    throw new Error('Error cargando materias');
+        if (!gradesRes.ok) throw new Error('Error cargando notas');
+        if (!subjectsRes.ok) throw new Error('Error cargando materias');
 
         const enrollmentsJson = await enrollmentsRes.json();
-        const gradesJson      = await gradesRes.json();
-        const subjectsJson    = await subjectsRes.json();
+        const gradesJson = await gradesRes.json();
+        const subjectsJson = await subjectsRes.json();
 
         const allEnrollments = enrollmentsJson.data ?? enrollmentsJson;
-        const allGrades      = gradesJson.data      ?? gradesJson;
-        const allSubjects    = subjectsJson.data    ?? subjectsJson;
+        const allGrades = gradesJson.data ?? gradesJson;
+        const allSubjects = subjectsJson.data ?? subjectsJson;
 
-        // El servidor ya filtró matrículas y notas de este estudiante
         myEnrollments = allEnrollments;
         myGrades = allGrades.map(g => ({
-            id:        g.id,
+            id: g.id,
             subjectId: parseInt(g.materia_id),
-            type:      g.tipo,
-            score:     parseFloat(g.puntaje),
+            type: g.tipo,
+            score: parseFloat(g.puntaje),
             trimestre: g.trimestre,
-            comment:   g.comentario || '',
-            date:      g.fecha_registro ? g.fecha_registro.split(' ')[0] : ''
+            comment: g.comentario || '',
+            date: g.fecha_registro ? g.fecha_registro.split(' ')[0] : ''
         }));
 
         const enrolledSubjectIds = myEnrollments.map(e => parseInt(e.subjectId));
@@ -221,11 +238,10 @@ function renderSubjectRow(subject, grades, avg, trimestre) {
 function openGradesDetailModal(subjectId, subjectName, trimestre) {
     const grades = getGradesForSubjectTrimestre(subjectId, trimestre);
 
-    // Agrupar por tipo
     const grouped = { parcial: [], taller: [], tarea: [] };
     grades.forEach(g => {
         if (grouped[g.type]) grouped[g.type].push(g);
-        else grouped['tarea'].push(g); // fallback
+        else grouped['tarea'].push(g);
     });
 
     const typeConfig = {
@@ -285,11 +301,9 @@ function openGradesDetailModal(subjectId, subjectName, trimestre) {
         </div>
     `;
 
-    // Insertar en el DOM y mostrar
     const existing = document.getElementById('gradesDetailOverlay');
     if (existing) existing.remove();
     document.body.insertAdjacentHTML('beforeend', modalHtml);
-    // Forzar reflow para animación
     requestAnimationFrame(() => {
         document.getElementById('gradesDetailOverlay').classList.add('visible');
     });
@@ -369,9 +383,48 @@ async function renderMyComments() {
     }
 }
 
+// ==================== CAMBIO CONTRASEÑA ====================
+document.getElementById('changePasswordForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const actual    = document.getElementById('cpActual').value;
+    const nueva     = document.getElementById('cpNueva').value;
+    const confirmar = document.getElementById('cpConfirmar').value;
+
+    if (nueva !== confirmar) {
+        Swal.fire('Error', 'Las contraseñas nuevas no coinciden', 'error');
+        return;
+    }
+    if (nueva.length < 6) {
+        Swal.fire('Error', 'La nueva contraseña debe tener al menos 6 caracteres', 'error');
+        return;
+    }
+
+    try {
+        const res  = await apiFetch('/auth/cambiar_password.php', {
+            method: 'POST',
+            body: JSON.stringify({ password_actual: actual, password_nueva: nueva })
+        });
+        const json = await res.json();
+        if (res.ok) {
+            const user = JSON.parse(localStorage.getItem('currentUser'));
+            user.password_cambiada = true;
+            localStorage.setItem('currentUser', JSON.stringify(user));
+            closeModal('changePasswordModal');
+            Swal.fire({ title: '¡Contraseña actualizada!', icon: 'success', timer: 1500, showConfirmButton: false });
+        } else {
+            Swal.fire('Error', json.error || 'No se pudo actualizar', 'error');
+        }
+    } catch (err) {
+        Swal.fire('Error', err.message, 'error');
+    }
+});
+
 // ==================== NAVEGACIÓN ====================
 document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.addEventListener('click', function () {
+        // Ignorar botones que no tengan data-view (como el de cambiar contraseña)
+        if (!this.dataset.view) return;
+        
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
         this.classList.add('active');
         const view = this.dataset.view;
@@ -381,7 +434,6 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
         if (view === 'comments') { loadCommentSubjects(); renderMyComments(); }
     });
 });
-
 // ==================== LOGOUT ====================
 async function logout() {
     try { await apiFetch('/auth/logout.php', { method: 'POST' }); } catch (e) {}
