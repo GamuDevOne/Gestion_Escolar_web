@@ -35,4 +35,3 @@ $pdo->prepare("UPDATE usuario SET password_hash = ?, password_cambiada = 1 WHERE
     ->execute([$newHash, $authUser['usuario_id']]);
 
 sendSuccess(["message" => "Contraseña actualizada correctamente"]);
-?>

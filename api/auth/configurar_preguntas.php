@@ -43,4 +43,3 @@ $pdo->prepare("UPDATE usuario SET preguntas_configuradas = 1 WHERE id = ?")
     ->execute([$authUser['usuario_id']]);
 
 sendSuccess(["message" => "Preguntas de seguridad configuradas correctamente"]);
-?>
