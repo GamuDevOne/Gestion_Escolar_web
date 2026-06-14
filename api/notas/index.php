@@ -4,9 +4,80 @@ require '../config/auth_middleware.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 
+const TIPOS_VALIDOS = ['PARCIAL', 'EXAMEN_TRIMESTRAL', 'APRECIACION'];
+const TIPOS_ACTIVIDAD_VALIDOS = ['Quiz','Parcial','Taller','Tarea','Proyecto','Investigacion','Exposicion','Laboratorio','Participacion','Otro'];
+const TRIMESTRES_VALIDOS = ['I Trimestre', 'II Trimestre', 'III Trimestre'];
+
 if ($method === 'GET') {
     requireRole($pdo, ['admin', 'profesor', 'estudiante']);
 
+    // ---------- MODO RESUMEN ----------
+    if (!empty($_GET['resumen']) && !empty($_GET['estudiante_id']) && !empty($_GET['materia_id'])) {
+        $estudianteId = $_GET['estudiante_id'];
+        $materiaId    = $_GET['materia_id'];
+
+        if ($authUser['rol'] === 'estudiante' && (int)$authUser['id_referencia'] !== (int)$estudianteId) {
+            sendError("No tienes permiso para ver este resumen", 403);
+        }
+
+        if ($authUser['rol'] === 'profesor') {
+            $check = $pdo->prepare("SELECT id FROM materia WHERE id = ? AND profesor_id = ?");
+            $check->execute([$materiaId, $authUser['id_referencia']]);
+            if (!$check->fetch()) sendError("No tienes permiso para ver este resumen", 403);
+        }
+
+        $stmt = $pdo->prepare("SELECT * FROM nota WHERE estudiante_id = ? AND materia_id = ? ORDER BY fecha_registro ASC");
+        $stmt->execute([$estudianteId, $materiaId]);
+        $notas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $resultado = [];
+        $notasTrimestrales = [];
+
+        foreach (TRIMESTRES_VALIDOS as $tri) {
+            $delTrimestre = array_values(array_filter($notas, fn($n) => $n['trimestre'] === $tri));
+
+            $parciales     = array_values(array_filter($delTrimestre, fn($n) => $n['tipo'] === 'PARCIAL'));
+            $apreciaciones = array_values(array_filter($delTrimestre, fn($n) => $n['tipo'] === 'APRECIACION'));
+
+            $examen = null;
+            foreach ($delTrimestre as $n) {
+                if ($n['tipo'] === 'EXAMEN_TRIMESTRAL') { $examen = $n; break; }
+            }
+
+            $promParciales = count($parciales) > 0
+                ? array_sum(array_map(fn($n) => (float)$n['puntaje'], $parciales)) / count($parciales)
+                : null;
+
+            $promApreciacion = count($apreciaciones) > 0
+                ? array_sum(array_map(fn($n) => (float)$n['puntaje'], $apreciaciones)) / count($apreciaciones)
+                : null;
+
+            $examenScore = $examen ? (float)$examen['puntaje'] : null;
+
+            $notaTrimestral = null;
+            if ($promParciales !== null && $promApreciacion !== null && $examenScore !== null) {
+                $notaTrimestral = round(($promParciales + $promApreciacion + $examenScore) / 3, 2);
+                $notasTrimestrales[] = $notaTrimestral;
+            }
+
+            $resultado[$tri] = [
+                "parciales"            => $parciales,
+                "promedio_parciales"   => $promParciales   !== null ? round($promParciales, 2)   : null,
+                "apreciaciones"        => $apreciaciones,
+                "promedio_apreciacion" => $promApreciacion !== null ? round($promApreciacion, 2) : null,
+                "examen_trimestral"    => $examenScore,
+                "nota_trimestral"      => $notaTrimestral
+            ];
+        }
+
+        $resultado["promedio_final"] = count($notasTrimestrales) === 3
+            ? round(array_sum($notasTrimestrales) / 3, 2)
+            : null;
+
+        sendSuccess($resultado);
+    }
+
+    // ---------- LISTADO NORMAL ----------
     $where = []; $params = [];
 
     if ($authUser['rol'] === 'profesor') {
@@ -46,8 +117,13 @@ elseif ($method === 'POST') {
 
     $puntaje = floatval($data['puntaje']);
     if ($puntaje < 1.0 || $puntaje > 5.0) sendError("La nota debe estar entre 1.0 y 5.0", 400);
-    if (!in_array($data['tipo'], ['parcial', 'taller', 'tarea'])) sendError("Tipo de evaluación no válido", 400);
-    if (!in_array($data['trimestre'], ['I Trimestre', 'II Trimestre', 'III Trimestre'])) sendError("Trimestre no válido", 400);
+    if (!in_array($data['tipo'], TIPOS_VALIDOS)) sendError("Tipo de evaluación no válido", 400);
+    if (!in_array($data['trimestre'], TRIMESTRES_VALIDOS)) sendError("Trimestre no válido", 400);
+
+    $tipoActividad = $data['tipo_actividad'] ?? null;
+    if ($tipoActividad !== null && !in_array($tipoActividad, TIPOS_ACTIVIDAD_VALIDOS)) {
+        sendError("Tipo de actividad no válido", 400);
+    }
 
     $profesorId = $authUser['id_referencia'];
 
@@ -59,8 +135,19 @@ elseif ($method === 'POST') {
     $checkMatricula->execute([$data['estudiante_id'], $data['materia_id']]);
     if (!$checkMatricula->fetch()) sendError("El estudiante no está matriculado en esta materia", 409);
 
-    $pdo->prepare("INSERT INTO nota (estudiante_id, materia_id, profesor_id, tipo, puntaje, trimestre, comentario, fecha_registro) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())")
-        ->execute([$data['estudiante_id'], $data['materia_id'], $profesorId, $data['tipo'], $puntaje, $data['trimestre'], $data['comentario'] ?? null]);
+    // Unicidad: solo EXAMEN_TRIMESTRAL puede existir una vez por estudiante/materia/trimestre
+    if ($data['tipo'] === 'EXAMEN_TRIMESTRAL') {
+        $checkUnico = $pdo->prepare("SELECT id FROM nota WHERE estudiante_id = ? AND materia_id = ? AND trimestre = ? AND tipo = 'EXAMEN_TRIMESTRAL'");
+        $checkUnico->execute([$data['estudiante_id'], $data['materia_id'], $data['trimestre']]);
+        if ($checkUnico->fetch()) sendError("Ya existe un Examen Trimestral registrado para este estudiante en este trimestre", 409);
+    }
+
+    $pdo->prepare("INSERT INTO nota (estudiante_id, materia_id, profesor_id, tipo, tipo_actividad, nombre, puntaje, trimestre, comentario, fecha_registro) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())")
+        ->execute([
+            $data['estudiante_id'], $data['materia_id'], $profesorId,
+            $data['tipo'], $tipoActividad, $data['nombre'] ?? null,
+            $puntaje, $data['trimestre'], $data['comentario'] ?? null
+        ]);
 
     sendCreated(["id" => $pdo->lastInsertId()]);
 }
@@ -78,8 +165,29 @@ elseif ($method === 'PUT') {
     $anterior = $notaActual->fetch(PDO::FETCH_ASSOC);
     if (!$anterior) sendError("Nota no encontrada o sin permiso para editarla", 403);
 
-    $pdo->prepare("UPDATE nota SET puntaje=?, tipo=?, comentario=?, trimestre=? WHERE id=?")
-        ->execute([$puntaje, $data['tipo'] ?? $anterior['tipo'], $data['comentario'] ?? $anterior['comentario'], $data['trimestre'] ?? $anterior['trimestre'], $data['id']]);
+    $tipo = $data['tipo'] ?? $anterior['tipo'];
+    if (!in_array($tipo, TIPOS_VALIDOS)) sendError("Tipo de evaluación no válido", 400);
+
+    $tipoActividad = $data['tipo_actividad'] ?? $anterior['tipo_actividad'];
+    if ($tipoActividad !== null && !in_array($tipoActividad, TIPOS_ACTIVIDAD_VALIDOS)) {
+        sendError("Tipo de actividad no válido", 400);
+    }
+
+    $trimestre = $data['trimestre'] ?? $anterior['trimestre'];
+
+    if ($tipo === 'EXAMEN_TRIMESTRAL') {
+        $checkUnico = $pdo->prepare("SELECT id FROM nota WHERE estudiante_id = ? AND materia_id = ? AND trimestre = ? AND tipo = 'EXAMEN_TRIMESTRAL' AND id != ?");
+        $checkUnico->execute([$anterior['estudiante_id'], $anterior['materia_id'], $trimestre, $data['id']]);
+        if ($checkUnico->fetch()) sendError("Ya existe un Examen Trimestral registrado para este estudiante en este trimestre", 409);
+    }
+
+    $pdo->prepare("UPDATE nota SET puntaje=?, tipo=?, tipo_actividad=?, nombre=?, comentario=?, trimestre=? WHERE id=?")
+        ->execute([
+            $puntaje, $tipo, $tipoActividad,
+            $data['nombre'] ?? $anterior['nombre'],
+            $data['comentario'] ?? $anterior['comentario'],
+            $trimestre, $data['id']
+        ]);
 
     $pdo->prepare("INSERT INTO nota_auditoria (nota_id, editor_id, puntaje_anterior, puntaje_nuevo, fecha_cambio) VALUES (?, ?, ?, ?, NOW())")
         ->execute([$data['id'], $authUser['usuario_id'], $anterior['puntaje'], $puntaje]);

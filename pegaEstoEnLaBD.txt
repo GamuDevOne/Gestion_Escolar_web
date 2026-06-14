@@ -1,0 +1,9 @@
+-- 1. Migrar tipos existentes al nuevo esquema
+UPDATE nota SET tipo = 'PARCIAL' WHERE tipo IN ('parcial', 'taller', 'tarea');
+
+-- 2. Cambiar ENUM y agregar columnas descriptivas
+ALTER TABLE nota
+  MODIFY COLUMN tipo ENUM('PARCIAL','EXAMEN_TRIMESTRAL','APRECIACION') NOT NULL,
+  ADD COLUMN tipo_actividad VARCHAR(50) NULL AFTER tipo,
+  ADD COLUMN nombre VARCHAR(100) NULL AFTER tipo_actividad;
+  
