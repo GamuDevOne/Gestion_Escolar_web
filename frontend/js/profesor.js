@@ -20,17 +20,20 @@ window.openChangePasswordModal = function() {
     document.getElementById('changePasswordForm').reset();
     document.getElementById('changePasswordModal').style.display = 'flex';
 };
+
 // ==================== NORMALIZACIÓN ====================
 function normalizeGrade(g) {
     return {
-        id:          g.id,
-        studentId:   parseInt(g.estudiante_id),
-        subjectId:   parseInt(g.materia_id),
-        type:        g.tipo,
-        score:       parseFloat(g.puntaje),
-        trimestre:   g.trimestre,
-        comment:     g.comentario || '',
-        date:        g.fecha_registro ? g.fecha_registro.split(' ')[0] : new Date().toLocaleDateString(),
+        id: g.id,
+        studentId: parseInt(g.estudiante_id),
+        subjectId: parseInt(g.materia_id),
+        type: g.tipo,
+        tipoActividad: g.tipo_actividad || '',
+        nombre: g.nombre || '',
+        score: parseFloat(g.puntaje),
+        trimestre: g.trimestre,
+        comment: g.comentario || '',
+        date: g.fecha_registro ? g.fecha_registro.split(' ')[0] : new Date().toLocaleDateString(),
         studentName: g.estudiante_nombre,
         subjectName: g.materia_nombre
     };
@@ -56,7 +59,6 @@ async function loadData() {
         return;
     }
     
-    // Verificar si debe cambiar contraseña
     if (!currentTeacher.password_cambiada && !currentTeacher.password_skipped) {
         window.location.href = 'cambiar_password.html';
         return;
@@ -139,12 +141,60 @@ function getGradesForStudent(studentId, subjectId = null, trimestre = null) {
     return grades.sort((a, b) => new Date(b.date) - new Date(a.date));
 }
 
-function getAverageForStudentTrimestre(studentId, subjectId, trimestre) {
-    let grades = myGrades.filter(g => g.studentId === studentId && g.subjectId === subjectId);
-    if (trimestre && trimestre !== 'Todas') grades = grades.filter(g => g.trimestre === trimestre);
+// ==================== FUNCIONES DE CÁLCULO ====================
+function calcularNotaTrimestral(studentId, subjectId, trimestre) {
+    const grades = myGrades.filter(g => 
+        g.studentId === studentId && 
+        g.subjectId === subjectId && 
+        g.trimestre === trimestre
+    );
+
+    const parciales = grades.filter(g => g.type === 'PARCIAL');
+    const apreciaciones = grades.filter(g => g.type === 'APRECIACION');
+    const examenes = grades.filter(g => g.type === 'EXAMEN_TRIMESTRAL');
+
+    if (parciales.length === 0 || apreciaciones.length === 0 || examenes.length === 0) {
+        return null;
+    }
+
+    const promParciales = parciales.reduce((s, g) => s + g.score, 0) / parciales.length;
+    const promApreciacion = apreciaciones.reduce((s, g) => s + g.score, 0) / apreciaciones.length;
+    const examen = examenes[0].score;
+
+    return (promParciales + promApreciacion + examen) / 3;
+}
+
+function calcularPromedioFinal(studentId, subjectId) {
+    const trimestres = ['I Trimestre', 'II Trimestre', 'III Trimestre'];
+    const notas = trimestres.map(t => calcularNotaTrimestral(studentId, subjectId, t));
+    if (notas.some(n => n === null)) return null;
+    return notas.reduce((s, n) => s + n, 0) / notas.length;
+}
+
+function generarResumenTrimestre(studentId, subjectId, trimestre) {
+    const grades = myGrades.filter(g => g.studentId === studentId && g.subjectId === subjectId && g.trimestre === trimestre);
+    const parciales = grades.filter(g => g.type === 'PARCIAL');
+    const apreciaciones = grades.filter(g => g.type === 'APRECIACION');
+    const examenes = grades.filter(g => g.type === 'EXAMEN_TRIMESTRAL');
+
+    const promParciales = parciales.length ? parciales.reduce((s, g) => s + g.score, 0) / parciales.length : null;
+    const promApreciacion = apreciaciones.length ? apreciaciones.reduce((s, g) => s + g.score, 0) / apreciaciones.length : null;
+    const examen = examenes.length ? examenes[0].score : null;
+
+    let notaTrimestral = null;
+    if (promParciales !== null && promApreciacion !== null && examen !== null) {
+        notaTrimestral = (promParciales + promApreciacion + examen) / 3;
+    }
+
+    return { promParciales, promApreciacion, examen, notaTrimestral };
+}
+
+// ==================== PROMEDIO SIMPLE PARA DASHBOARD ====================
+function calcularPromedioSimple(studentId, subjectId) {
+    const grades = myGrades.filter(g => g.studentId === studentId && g.subjectId === subjectId);
     if (grades.length === 0) return null;
-    const sum = grades.reduce((acc, g) => acc + g.score, 0);
-    return (sum / grades.length).toFixed(1);
+    const sum = grades.reduce((s, g) => s + g.score, 0);
+    return sum / grades.length;
 }
 
 // ==================== MATERIAS ====================
@@ -199,21 +249,29 @@ function changeSubject() {
 
 function updateQuickStats() {
     const students = getStudentsForSubject(currentSubjectId);
-    let totalGrades = 0, approved = 0, failed = 0, withGrades = 0;
+    let totalPromedios = 0, countWithGrades = 0;
+    let approved = 0, inProgress = 0;
 
     students.forEach(s => {
-        const avg = getAverageForStudentTrimestre(s.id, currentSubjectId, null);
+        const avg = calcularPromedioSimple(s.id, currentSubjectId);
         if (avg !== null) {
-            totalGrades += parseFloat(avg);
-            withGrades++;
-            parseFloat(avg) >= 3 ? approved++ : failed++;
+            totalPromedios += avg;
+            countWithGrades++;
+            if (avg >= 3) {
+                approved++;
+            } else {
+                inProgress++;
+            }
+        } else {
+            // Estudiante sin notas → En proceso
+            inProgress++;
         }
     });
 
     document.getElementById('statTotalStudents').textContent = students.length;
-    document.getElementById('statAvgGrade').textContent      = withGrades > 0 ? (totalGrades / withGrades).toFixed(1) : 0;
+    document.getElementById('statAvgGrade').textContent      = countWithGrades > 0 ? (totalPromedios / countWithGrades).toFixed(1) : 0;
     document.getElementById('statApproved').textContent      = approved;
-    document.getElementById('statFailed').textContent        = failed;
+    document.getElementById('statFailed').textContent        = inProgress;
 }
 
 function renderStudentsByGrade() {
@@ -255,7 +313,8 @@ function renderStudentsByGrade() {
 }
 
 function renderStudentCard(student) {
-    const avg = getAverageForStudentTrimestre(student.id, currentSubjectId, null);
+    const avg = calcularPromedioSimple(student.id, currentSubjectId);
+    const hasNotes = myGrades.some(g => g.studentId === student.id && g.subjectId === currentSubjectId);
     return `
         <div class="student-grade-card" onclick="openStudentGradesModal(${student.id})">
             <div class="student-info">
@@ -265,12 +324,16 @@ function renderStudentCard(student) {
             <div class="grades-info">
                 ${avg !== null ? `
                     <div class="current-grade">
-                        <i class="fas fa-chart-line"></i> Promedio General: <strong>${avg}</strong>
-                        <span class="${parseFloat(avg) >= 3 ? 'grade-badge' : 'grade-badge low'}" style="margin-left:8px;">
-                            ${parseFloat(avg) >= 3 ? '<i class="fas fa-check"></i> Aprobado' : '<i class="fas fa-rotate"></i> En proceso'}
+                        <i class="fas fa-chart-line"></i> Promedio: <strong>${avg.toFixed(2)}</strong>
+                        <span class="${avg >= 3 ? 'grade-badge' : 'grade-badge low'}" style="margin-left:8px;">
+                            ${avg >= 3 ? '<i class="fas fa-check"></i> Aprobado' : '<i class="fas fa-rotate"></i> En proceso'}
                         </span>
                     </div>
-                ` : '<div class="current-grade"><i class="fas fa-info-circle"></i> Sin notas registradas</div>'}
+                ` : `
+                    <div class="current-grade">
+                        ${hasNotes ? `<i class="fas fa-info-circle"></i> Notas registradas` : `<i class="fas fa-info-circle"></i> Sin notas registradas`}
+                    </div>
+                `}
                 <div style="font-size:12px; color:#8a7055; margin-top:6px;"><i class="fas fa-mouse-pointer"></i> Click para ver detalle</div>
             </div>
         </div>
@@ -326,28 +389,63 @@ function renderTrimestreContent() {
         currentStudentForModal.id, currentSubjectId,
         currentTrimestre === 'Todas' ? null : currentTrimestre
     );
-    const avg = currentTrimestre !== 'Todas'
-        ? getAverageForStudentTrimestre(currentStudentForModal.id, currentSubjectId, currentTrimestre)
+    const notaTrimestral = currentTrimestre !== 'Todas'
+        ? calcularNotaTrimestral(currentStudentForModal.id, currentSubjectId, currentTrimestre)
         : null;
 
+    // Verificar si ya existe examen trimestral para deshabilitar la opción
+    const examenExistente = currentTrimestre !== 'Todas' && myGrades.some(g => 
+        g.studentId === currentStudentForModal.id &&
+        g.subjectId === currentSubjectId &&
+        g.trimestre === currentTrimestre &&
+        g.type === 'EXAMEN_TRIMESTRAL'
+    );
+
     container.innerHTML = `
-        ${avg !== null ? `
+        ${notaTrimestral !== null ? `
             <div class="period-avg">
-                <i class="fas fa-chart-line"></i> Promedio de ${currentTrimestre}: <span>${avg}</span>
-                ${parseFloat(avg) >= 3 ? '<i class="fas fa-trophy"></i> Aprobado' : '<i class="fas fa-rotate"></i> En proceso'}
+                <i class="fas fa-chart-line"></i> Nota Trimestral: <span>${notaTrimestral.toFixed(2)}</span>
+                ${notaTrimestral >= 3 ? '<i class="fas fa-trophy"></i> Aprobado' : '<i class="fas fa-rotate"></i> En proceso'}
             </div>
-        ` : ''}
+        ` : `
+            <div class="period-avg" style="background: var(--ivory-dark);">
+                <i class="fas fa-hourglass-half"></i> ${grades.length > 0 ? 'Notas registradas' : 'Sin notas registradas'}
+            </div>
+        `}
 
         <div class="add-grade-section">
             <div class="add-grade-title"><i class="fas fa-plus-circle"></i> Agregar nueva evaluación</div>
             <div class="grade-form-row">
                 <div class="form-group">
-                    <label>Tipo</label>
+                    <label>Tipo de evaluación</label>
+                    ${examenExistente ? `<div style="color:#b8860b; font-weight:bold; margin-bottom:5px;">✓ Examen trimestral ya registrado</div>` : ''}
                     <select id="newGradeType" class="grade-type-select">
-                        <option value="parcial">Parcial</option>
-                        <option value="taller">Taller</option>
-                        <option value="tarea">Tarea</option>
+                        <option value="PARCIAL">Parcial</option>
+                        <option value="EXAMEN_TRIMESTRAL" ${examenExistente ? 'disabled style="color:#999;"' : ''}>
+                            ${examenExistente ? 'Examen Trimestral (ya registrado)' : 'Examen Trimestral'}
+                        </option>
+                        <option value="APRECIACION">Apreciación</option>
                     </select>
+                </div>
+                <div class="form-group">
+                    <label>Tipo de actividad (opcional)</label>
+                    <select id="newGradeTipoActividad" class="grade-type-select">
+                        <option value="">-- Seleccionar --</option>
+                        <option value="Quiz">Quiz</option>
+                        <option value="Parcial">Parcial</option>
+                        <option value="Taller">Taller</option>
+                        <option value="Tarea">Tarea</option>
+                        <option value="Proyecto">Proyecto</option>
+                        <option value="Investigacion">Investigación</option>
+                        <option value="Exposicion">Exposición</option>
+                        <option value="Laboratorio">Laboratorio</option>
+                        <option value="Participacion">Participación</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Nombre de la actividad (opcional)</label>
+                    <input type="text" id="newGradeNombre" placeholder="Ej: Quiz #1">
                 </div>
                 <div class="form-group">
                     <label>Nota (1.0 - 5.0)</label>
@@ -355,7 +453,7 @@ function renderTrimestreContent() {
                 </div>
                 <div class="form-group" style="flex:2">
                     <label>Comentario</label>
-                    <input type="text" id="newGradeComment" placeholder="Descripción de la evaluación...">
+                    <input type="text" id="newGradeComment" placeholder="Descripción...">
                 </div>
                 <div class="form-group">
                     <button class="btn-primary" onclick="addNewGrade()" style="margin-top:22px;">
@@ -379,20 +477,63 @@ function renderTrimestreContent() {
             </div>
         </div>
     `;
+
+    // Resumen del trimestre (solo si hay notas)
+    const resumen = generarResumenTrimestre(currentStudentForModal.id, currentSubjectId, currentTrimestre);
+    if (resumen && grades.length > 0) {
+        container.innerHTML += `
+            <div style="margin-top: 20px; border-top: 2px solid var(--parchment); padding-top: 16px;">
+                <h4 style="font-family: 'Cinzel', serif; color: var(--crimson-deep);">Resumen del Trimestre</h4>
+                <table style="width:100%; border-collapse: collapse; margin-top:10px;">
+                    <tr><td style="padding:6px 0;"><strong>Promedio Parciales</strong></td><td>${resumen.promParciales !== null ? resumen.promParciales.toFixed(2) : 'Sin datos'}</td></tr>
+                    <tr><td style="padding:6px 0;"><strong>Promedio Apreciación</strong></td><td>${resumen.promApreciacion !== null ? resumen.promApreciacion.toFixed(2) : 'Sin datos'}</td></tr>
+                    <tr><td style="padding:6px 0;"><strong>Examen Trimestral</strong></td><td>${resumen.examen !== null ? resumen.examen.toFixed(2) : 'Sin registrar'}</td></tr>
+                    <tr style="font-weight:bold; border-top: 2px solid var(--crimson);">
+                        <td style="padding:10px 0;">Nota Trimestral</td>
+                        <td>${resumen.notaTrimestral !== null ? resumen.notaTrimestral.toFixed(2) : '<span style="color:#8a7055;">En curso</span>'}</td>
+                    </tr>
+                </table>
+            </div>
+        `;
+    }
 }
 
 function renderGradeHistoryItem(grade) {
+    // Generar nombre por defecto si está vacío
+    let nombreDisplay = grade.nombre;
+    if (!nombreDisplay || nombreDisplay.trim() === '') {
+        const typeLabels = {
+            'PARCIAL': 'Parcial',
+            'EXAMEN_TRIMESTRAL': 'Examen Trimestral',
+            'APRECIACION': 'Apreciación'
+        };
+        // Contar cuántas notas del mismo tipo y trimestre hay para numerar
+        const mismasNotas = myGrades.filter(g => 
+            g.studentId === grade.studentId && 
+            g.subjectId === grade.subjectId && 
+            g.trimestre === grade.trimestre && 
+            g.type === grade.type &&
+            g.id <= grade.id
+        );
+        const numero = mismasNotas.length;
+        nombreDisplay = `${typeLabels[grade.type] || grade.type} ${numero}`;
+    }
+
     const typeLabels = {
-        parcial: '<i class="fas fa-pen"></i> Parcial',
-        taller:  '<i class="fas fa-tools"></i> Taller',
-        tarea:   '<i class="fas fa-house"></i> Tarea'
+        'PARCIAL': '<i class="fas fa-pen"></i> Parcial',
+        'EXAMEN_TRIMESTRAL': '<i class="fas fa-star"></i> Examen Trimestral',
+        'APRECIACION': '<i class="fas fa-hand-peace"></i> Apreciación'
     };
     return `
         <div class="grade-history-item ${grade.type}">
             <div class="grade-info">
                 <div>
                     <span class="grade-type-badge ${grade.type}">${typeLabels[grade.type] || grade.type}</span>
-                    <span class="grade-score">${grade.score}</span>
+                    <span class="grade-score">${grade.score.toFixed(1)}</span>
+                </div>
+                <div style="font-size:13px; color:var(--ink-soft); margin-top:4px;">
+                    <strong>${escapeHtml(nombreDisplay)}</strong>
+                    ${grade.tipoActividad ? `<span class="badge" style="background:var(--ivory-dark); padding:2px 8px; border-radius:2px; margin-left:6px;">${escapeHtml(grade.tipoActividad)}</span>` : ''}
                 </div>
                 ${grade.comment ? `<div class="grade-comment"><i class="fas fa-quote-left"></i> ${escapeHtml(grade.comment)}</div>` : ''}
                 <div class="grade-date"><i class="fas fa-calendar-alt"></i> ${grade.date} | ${grade.trimestre}</div>
@@ -417,9 +558,11 @@ function changeTrimestre(trimestre) {
 
 // ==================== AGREGAR NOTA ====================
 async function addNewGrade() {
-    const type      = document.getElementById('newGradeType').value;
-    const score     = parseFloat(document.getElementById('newGradeScore').value);
-    const comment   = document.getElementById('newGradeComment').value.trim();
+    const type = document.getElementById('newGradeType').value;
+    const tipoActividad = document.getElementById('newGradeTipoActividad').value;
+    const nombre = document.getElementById('newGradeNombre').value.trim();
+    const score = parseFloat(document.getElementById('newGradeScore').value);
+    const comment = document.getElementById('newGradeComment').value.trim();
     const trimestre = currentTrimestre === 'Todas' ? 'I Trimestre' : currentTrimestre;
 
     if (isNaN(score) || score < 1 || score > 5) {
@@ -427,31 +570,56 @@ async function addNewGrade() {
         return;
     }
 
+    // Validación para examen trimestral duplicado (solo mostrar el mensaje "nota de examen final existente")
+    if (type === 'EXAMEN_TRIMESTRAL') {
+        const existing = myGrades.find(g => 
+            g.studentId === currentStudentForModal.id &&
+            g.subjectId === currentSubjectId &&
+            g.trimestre === trimestre &&
+            g.type === 'EXAMEN_TRIMESTRAL'
+        );
+        if (existing) {
+            Swal.fire({
+                title: 'nota de examen final existente',
+                icon: 'info',
+                timer: 2000,
+                showConfirmButton: false
+            });
+            return;
+        }
+    }
+
+    const payload = {
+        estudiante_id: currentStudentForModal.id,
+        materia_id: currentSubjectId,
+        tipo: type,
+        puntaje: score,
+        trimestre: trimestre,
+        comentario: comment || null,
+        tipo_actividad: tipoActividad || null,
+        nombre: nombre || null
+    };
+
     try {
         const res = await apiFetch('/notas/', {
             method: 'POST',
-            body: JSON.stringify({
-                estudiante_id: currentStudentForModal.id,
-                materia_id:    currentSubjectId,
-                tipo:          type,
-                puntaje:       score,
-                trimestre:     trimestre,
-                comentario:    comment || null
-            })
+            body: JSON.stringify(payload)
         });
 
         if (res.ok) {
-            const result  = await res.json();
+            const result = await res.json();
             const subject = mySubjects.find(s => s.id === currentSubjectId);
             myGrades.push({
-                id:          result.id,
-                studentId:   currentStudentForModal.id,
-                subjectId:   currentSubjectId,
+                id: result.id,
+                studentId: currentStudentForModal.id,
+                subjectId: currentSubjectId,
                 type,
+                tipoActividad,
+                nombre,
                 score,
                 trimestre,
                 comment,
-                date:        new Date().toISOString().split('T')[0],
+                date: new Date().toISOString().split('T')[0],
                 studentName: currentStudentForModal.name,
                 subjectName: subject?.name || ''
             });
@@ -463,7 +631,16 @@ async function addNewGrade() {
             updateDashboard();
         } else {
             const error = await res.json();
-            Swal.fire('Error', error.error || 'No se pudo guardar la nota', 'error');
+            if (res.status === 409) {
+                Swal.fire({
+                    title: 'nota de examen final existente',
+                    icon: 'info',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            } else {
+                Swal.fire('Error', error.error || 'No se pudo guardar la nota', 'error');
+            }
         }
     } catch (error) {
         Swal.fire('Error', error.message, 'error');
@@ -473,9 +650,13 @@ async function addNewGrade() {
 // ==================== ELIMINAR NOTA ====================
 async function deleteGrade(gradeId) {
     const result = await Swal.fire({
-        title: '¿Eliminar esta nota?', text: 'Esta acción no se puede deshacer', icon: 'warning',
-        showCancelButton: true, confirmButtonColor: '#8B0000',
-        confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar'
+        title: '¿Eliminar esta nota?',
+        text: 'Esta acción no se puede deshacer',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#8B0000',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar'
     });
 
     if (result.isConfirmed) {
@@ -561,7 +742,6 @@ document.getElementById('changePasswordForm')?.addEventListener('submit', async 
 // ==================== NAVEGACIÓN ====================
 document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.addEventListener('click', function () {
-        // Ignorar botones que no tengan data-view (como el de cambiar contraseña)
         if (!this.dataset.view) return;
         
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));

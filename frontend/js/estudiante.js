@@ -50,23 +50,13 @@ async function loadData() {
         const gradesJson = await gradesRes.json();
         const subjectsJson = await subjectsRes.json();
 
-        const allEnrollments = enrollmentsJson.data ?? enrollmentsJson;
-        const allGrades = gradesJson.data ?? gradesJson;
-        const allSubjects = subjectsJson.data ?? subjectsJson;
+        myEnrollments = enrollmentsJson.data ?? enrollmentsJson;
+        myGrades = gradesJson.data?.map ? gradesJson.data.map(normalizeGrade) : gradesJson.map(normalizeGrade);
+        mySubjects = subjectsJson.data ?? subjectsJson;
 
-        myEnrollments = allEnrollments;
-        myGrades = allGrades.map(g => ({
-            id: g.id,
-            subjectId: parseInt(g.materia_id),
-            type: g.tipo,
-            score: parseFloat(g.puntaje),
-            trimestre: g.trimestre,
-            comment: g.comentario || '',
-            date: g.fecha_registro ? g.fecha_registro.split(' ')[0] : ''
-        }));
-
+        // Filtrar materias en las que está matriculado
         const enrolledSubjectIds = myEnrollments.map(e => parseInt(e.subjectId));
-        mySubjects = allSubjects.filter(s => enrolledSubjectIds.includes(parseInt(s.id)));
+        mySubjects = mySubjects.filter(s => enrolledSubjectIds.includes(parseInt(s.id)));
 
         updateDashboard();
         renderGradesReport();
@@ -79,54 +69,107 @@ async function loadData() {
     }
 }
 
+// ==================== NORMALIZACIÓN ====================
+function normalizeGrade(g) {
+    return {
+        id: g.id,
+        subjectId: parseInt(g.materia_id),
+        type: g.tipo,                     // 'PARCIAL' | 'EXAMEN_TRIMESTRAL' | 'APRECIACION'
+        tipoActividad: g.tipo_actividad || '',
+        nombre: g.nombre || '',
+        score: parseFloat(g.puntaje),
+        trimestre: g.trimestre,
+        comment: g.comentario || '',
+        date: g.fecha_registro ? g.fecha_registro.split(' ')[0] : ''
+    };
+}
+
 // ==================== FILTRADO ====================
 function getGradesForSubjectTrimestre(subjectId, trimestre) {
     return myGrades.filter(g => g.subjectId === subjectId && g.trimestre === trimestre);
 }
 
-function getAverageForSubjectTrimestre(subjectId, trimestre) {
-    const grades = getGradesForSubjectTrimestre(subjectId, trimestre);
-    if (grades.length === 0) return null;
-    return (grades.reduce((acc, g) => acc + g.score, 0) / grades.length).toFixed(1);
+// ==================== NUEVAS FUNCIONES DE CÁLCULO ====================
+function calcularNotaTrimestral(subjectId, trimestre) {
+    const grades = myGrades.filter(g => g.subjectId === subjectId && g.trimestre === trimestre);
+    
+    const parciales = grades.filter(g => g.type === 'PARCIAL');
+    const apreciaciones = grades.filter(g => g.type === 'APRECIACION');
+    const examenes = grades.filter(g => g.type === 'EXAMEN_TRIMESTRAL');
+
+    if (parciales.length === 0 || apreciaciones.length === 0 || examenes.length === 0) {
+        return null;
+    }
+
+    const promParciales = parciales.reduce((s, g) => s + g.score, 0) / parciales.length;
+    const promApreciacion = apreciaciones.reduce((s, g) => s + g.score, 0) / apreciaciones.length;
+    const examen = examenes[0].score;
+
+    return (promParciales + promApreciacion + examen) / 3;
 }
 
-function getGeneralAverage() {
-    let totalSum = 0, subjectCount = 0;
-    for (const subject of mySubjects) {
-        let subjectTotal = 0, trimestreCount = 0;
-        for (const trimestre of TRIMESTRES) {
-            const avg = getAverageForSubjectTrimestre(subject.id, trimestre);
-            if (avg !== null) { subjectTotal += parseFloat(avg); trimestreCount++; }
-        }
-        if (trimestreCount > 0) { totalSum += subjectTotal / trimestreCount; subjectCount++; }
-    }
-    return subjectCount > 0 ? (totalSum / subjectCount).toFixed(1) : 0;
+function calcularPromedioFinal(subjectId) {
+    const notas = TRIMESTRES.map(t => calcularNotaTrimestral(subjectId, t));
+    if (notas.some(n => n === null)) return null;
+    return notas.reduce((s, n) => s + n, 0) / notas.length;
 }
 
-function getApprovedCount() {
-    let approved = 0;
-    for (const subject of mySubjects) {
-        let subjectTotal = 0, trimestreCount = 0;
-        for (const trimestre of TRIMESTRES) {
-            const avg = getAverageForSubjectTrimestre(subject.id, trimestre);
-            if (avg !== null) { subjectTotal += parseFloat(avg); trimestreCount++; }
-        }
-        if (trimestreCount > 0 && subjectTotal / trimestreCount >= 3) approved++;
+function generarResumenTrimestre(subjectId, trimestre) {
+    const grades = myGrades.filter(g => g.subjectId === subjectId && g.trimestre === trimestre);
+    const parciales = grades.filter(g => g.type === 'PARCIAL');
+    const apreciaciones = grades.filter(g => g.type === 'APRECIACION');
+    const examenes = grades.filter(g => g.type === 'EXAMEN_TRIMESTRAL');
+
+    const promParciales = parciales.length ? parciales.reduce((s, g) => s + g.score, 0) / parciales.length : null;
+    const promApreciacion = apreciaciones.length ? apreciaciones.reduce((s, g) => s + g.score, 0) / apreciaciones.length : null;
+    const examen = examenes.length ? examenes[0].score : null;
+
+    let notaTrimestral = null;
+    if (promParciales !== null && promApreciacion !== null && examen !== null) {
+        notaTrimestral = (promParciales + promApreciacion + examen) / 3;
     }
-    return approved;
+
+    return { promParciales, promApreciacion, examen, notaTrimestral };
 }
 
 // ==================== DASHBOARD ====================
 function updateDashboard() {
     document.getElementById('mySubjectsCount').textContent = mySubjects.length;
-    document.getElementById('myAverage').textContent       = getGeneralAverage();
-    document.getElementById('approvedCount').textContent   = getApprovedCount();
+    
+    // Promedio general: promedio de los promedios finales de cada materia (solo si completos)
+    let total = 0, count = 0;
+    for (const subject of mySubjects) {
+        const avg = calcularPromedioFinal(subject.id);
+        if (avg !== null) {
+            total += avg;
+            count++;
+        }
+    }
+    document.getElementById('myAverage').textContent = count > 0 ? (total / count).toFixed(1) : 0;
+    
+    // Materias aprobadas: aquellas con promedio final >= 3 (solo si completas)
+    let approved = 0;
+    for (const subject of mySubjects) {
+        const avg = calcularPromedioFinal(subject.id);
+        if (avg !== null && avg >= 3) approved++;
+    }
+    document.getElementById('approvedCount').textContent = approved;
 }
 
 // ==================== REPORTE DE NOTAS ====================
 function renderGradesReport() {
-    const container  = document.getElementById('gradesReport');
-    const generalAvg = getGeneralAverage();
+    const container = document.getElementById('gradesReport');
+    
+    // Promedio general
+    let total = 0, count = 0;
+    for (const subject of mySubjects) {
+        const avg = calcularPromedioFinal(subject.id);
+        if (avg !== null) {
+            total += avg;
+            count++;
+        }
+    }
+    const generalAvg = count > 0 ? (total / count).toFixed(1) : 0;
 
     if (mySubjects.length === 0) {
         container.innerHTML = `
@@ -164,13 +207,22 @@ function renderGradesReport() {
 }
 
 function renderTrimestreSection(trimestre) {
-    let hasAnyGrade = false, trimestreTotal = 0, trimestreCount = 0;
+    // Ahora hasAnyGrade se basa en si hay notas individuales, no en nota trimestral
+    let hasAnyGrade = false;
+    let trimestreTotal = 0;
+    let trimestreCount = 0;
 
     const subjectRows = mySubjects.map(subject => {
         const grades = getGradesForSubjectTrimestre(subject.id, trimestre);
-        const avg    = getAverageForSubjectTrimestre(subject.id, trimestre);
-        if (avg !== null) { hasAnyGrade = true; trimestreTotal += parseFloat(avg); trimestreCount++; }
-        return renderSubjectRow(subject, grades, avg, trimestre);
+        const notaTrim = calcularNotaTrimestral(subject.id, trimestre);
+        if (grades.length > 0) {
+            hasAnyGrade = true;
+            if (notaTrim !== null) {
+                trimestreTotal += notaTrim;
+                trimestreCount++;
+            }
+        }
+        return renderSubjectRow(subject, grades, notaTrim, trimestre);
     }).join('');
 
     const trimestreAvg = trimestreCount > 0 ? (trimestreTotal / trimestreCount).toFixed(1) : null;
@@ -182,7 +234,7 @@ function renderTrimestreSection(trimestre) {
                 <div class="trimestre-average">
                     ${trimestreAvg !== null
                         ? `<span class="value">Promedio: ${trimestreAvg}</span>`
-                        : `<span class="empty"><i class="fas fa-chart-simple"></i> Sin notas registradas</span>`
+                        : `<span class="empty"><i class="fas fa-chart-simple"></i> ${hasAnyGrade ? 'Notas incompletas' : 'Sin notas registradas'}</span>`
                     }
                 </div>
             </div>
@@ -193,7 +245,7 @@ function renderTrimestreSection(trimestre) {
                             <tr>
                                 <th><i class="fas fa-book"></i> Materia</th>
                                 <th><i class="fas fa-list"></i> Notas</th>
-                                <th><i class="fas fa-bullseye"></i> Promedio</th>
+                                <th><i class="fas fa-bullseye"></i> Nota Trimestral</th>
                                 <th><i class="fas fa-circle-check"></i> Estado</th>
                             </tr>
                         </thead>
@@ -210,25 +262,27 @@ function renderTrimestreSection(trimestre) {
     `;
 }
 
-function renderSubjectRow(subject, grades, avg, trimestre) {
+function renderSubjectRow(subject, grades, notaTrim, trimestre) {
     const notasBtn = grades.length > 0
         ? `<button class="btn-ver-notas" onclick="openGradesDetailModal(${subject.id}, '${escapeHtml(subject.name)}', '${trimestre}')">
-               <i class="fas fa-eye"></i> Ver notas
+               <i class="fas fa-eye"></i> Ver notas (${grades.length})
            </button>`
         : `<span class="no-grades"><i class="fas fa-minus-circle"></i> Sin notas</span>`;
 
     let statusHtml = '<span class="status-badge empty"><i class="fas fa-question-circle"></i> Sin definir</span>';
-    if (avg !== null) {
-        statusHtml = parseFloat(avg) >= 3
+    if (notaTrim !== null) {
+        statusHtml = notaTrim >= 3
             ? '<span class="status-badge approved"><i class="fas fa-check"></i> Aprobado</span>'
             : '<span class="status-badge failed"><i class="fas fa-clock"></i> En proceso</span>';
+    } else if (grades.length > 0) {
+        statusHtml = '<span class="status-badge waiting"><i class="fas fa-hourglass-half"></i> Incompleto</span>';
     }
 
     return `
         <tr>
             <td class="subject-name">${escapeHtml(subject.name)}</td>
             <td>${notasBtn}</td>
-            <td class="subject-average">${avg !== null ? `<span class="value">${avg}</span>` : '<span class="empty">S/N</span>'}</td>
+            <td class="subject-average">${notaTrim !== null ? `<span class="value">${notaTrim.toFixed(1)}</span>` : '<span class="empty">En curso</span>'}</td>
             <td>${statusHtml}</td>
         </tr>
     `;
@@ -237,49 +291,71 @@ function renderSubjectRow(subject, grades, avg, trimestre) {
 // ==================== MODAL DETALLE DE NOTAS ====================
 function openGradesDetailModal(subjectId, subjectName, trimestre) {
     const grades = getGradesForSubjectTrimestre(subjectId, trimestre);
+    const resumen = generarResumenTrimestre(subjectId, trimestre);
+    
+    const parciales = grades.filter(g => g.type === 'PARCIAL');
+    const apreciaciones = grades.filter(g => g.type === 'APRECIACION');
+    const examenes = grades.filter(g => g.type === 'EXAMEN_TRIMESTRAL');
 
-    const grouped = { parcial: [], taller: [], tarea: [] };
-    grades.forEach(g => {
-        if (grouped[g.type]) grouped[g.type].push(g);
-        else grouped['tarea'].push(g);
-    });
-
-    const typeConfig = {
-        parcial: { label: 'Parciales',   icon: 'fas fa-pen',   color: 'var(--crimson)' },
-        taller:  { label: 'Talleres',    icon: 'fas fa-tools', color: 'var(--gold)' },
-        tarea:   { label: 'Tareas',      icon: 'fas fa-home',  color: '#8a7055' }
-    };
+    const notaTrimestral = resumen.notaTrimestral;
+    const isApproved = notaTrimestral !== null && notaTrimestral >= 3;
 
     let contentHtml = '';
-    for (const [type, items] of Object.entries(grouped)) {
-        if (items.length === 0) continue;
-        const cfg = typeConfig[type];
-        const typeAvg = (items.reduce((a, g) => a + g.score, 0) / items.length).toFixed(1);
+
+    // Parciales
+    if (parciales.length) {
+        contentHtml += renderGradeGroup('Parciales', parciales, resumen.promParciales, 'var(--crimson)');
+    }
+    // Apreciación
+    if (apreciaciones.length) {
+        contentHtml += renderGradeGroup('Apreciación', apreciaciones, resumen.promApreciacion, 'var(--gold)');
+    }
+    // Examen Trimestral
+    if (examenes.length) {
+        const examen = examenes[0];
         contentHtml += `
             <div class="gd-group">
-                <div class="gd-group-header" style="border-left-color:${cfg.color}">
-                    <span class="gd-group-title"><i class="${cfg.icon}"></i> ${cfg.label}</span>
-                    <span class="gd-group-avg" style="color:${cfg.color}">Promedio: ${typeAvg}</span>
+                <div class="gd-group-header" style="border-left-color:#8a7055;">
+                    <span class="gd-group-title"><i class="fas fa-star"></i> Examen Trimestral</span>
+                    <span class="gd-group-avg" style="color:#8a7055;">${examen.score.toFixed(1)}</span>
                 </div>
                 <div class="gd-items">
-                    ${items.map(g => `
-                        <div class="gd-item">
-                            <div class="gd-item-left">
-                                <span class="gd-item-name">
-                                    ${g.comment ? escapeHtml(g.comment) : cfg.label.slice(0, -1) + ' ' + (items.indexOf(g) + 1)}
-                                </span>
-                                <span class="gd-item-date"><i class="fas fa-calendar-alt"></i> ${g.date || ''}</span>
-                            </div>
-                            <div class="gd-item-score" style="color:${cfg.color}">${g.score}</div>
+                    <div class="gd-item">
+                        <div class="gd-item-left">
+                            <span class="gd-item-name">${escapeHtml(examen.nombre || 'Examen Trimestral')}</span>
+                            <span class="gd-item-date"><i class="fas fa-calendar-alt"></i> ${examen.date || ''}</span>
                         </div>
-                    `).join('')}
+                        <div class="gd-item-score" style="color:#8a7055;">${examen.score.toFixed(1)}</div>
+                    </div>
                 </div>
             </div>
         `;
     }
 
-    const avg = (grades.reduce((a, g) => a + g.score, 0) / grades.length).toFixed(1);
-    const isApproved = parseFloat(avg) >= 3;
+    // Si no hay ninguna nota, mostrar mensaje
+    if (!parciales.length && !apreciaciones.length && !examenes.length) {
+        contentHtml = `
+            <div style="text-align:center; padding:40px; color:#8a7055;">
+                <i class="fas fa-inbox" style="font-size:40px; display:block; margin-bottom:10px;"></i>
+                No hay notas registradas en este trimestre
+            </div>
+        `;
+    } else {
+        // Resumen final (solo si hay notas)
+        contentHtml += `
+            <div style="margin-top: 20px; border-top: 2px solid var(--parchment); padding-top: 16px;">
+                <table style="width:100%; border-collapse: collapse;">
+                    <tr><td><strong>Promedio Parciales:</strong></td><td>${resumen.promParciales !== null ? resumen.promParciales.toFixed(2) : 'Sin datos'}</td></tr>
+                    <tr><td><strong>Promedio Apreciación:</strong></td><td>${resumen.promApreciacion !== null ? resumen.promApreciacion.toFixed(2) : 'Sin datos'}</td></tr>
+                    <tr><td><strong>Examen Trimestral:</strong></td><td>${resumen.examen !== null ? resumen.examen.toFixed(2) : 'Sin registrar'}</td></tr>
+                    <tr style="font-weight:bold; border-top: 2px solid var(--crimson);">
+                        <td>Nota Trimestral</td>
+                        <td>${notaTrimestral !== null ? notaTrimestral.toFixed(2) : '<span style="color:#8a7055;">En curso</span>'}</td>
+                    </tr>
+                </table>
+            </div>
+        `;
+    }
 
     const modalHtml = `
         <div class="gd-modal-overlay" id="gradesDetailOverlay" onclick="closeGradesDetailModal(event)">
@@ -289,9 +365,9 @@ function openGradesDetailModal(subjectId, subjectName, trimestre) {
                     <div class="gd-subject-name"><i class="fas fa-book"></i> ${escapeHtml(subjectName)}</div>
                     <div class="gd-trimestre"><i class="fas fa-calendar-alt"></i> ${trimestre}</div>
                     <div class="gd-avg-badge ${isApproved ? 'approved' : 'failed'}">
-                        <span class="gd-avg-label">Promedio</span>
-                        <span class="gd-avg-value">${avg}</span>
-                        <span class="gd-avg-status">${isApproved ? '<i class="fas fa-check"></i> Aprobado' : '<i class="fas fa-clock"></i> En proceso'}</span>
+                        <span class="gd-avg-label">Nota Trimestral</span>
+                        <span class="gd-avg-value">${notaTrimestral !== null ? notaTrimestral.toFixed(1) : 'En curso'}</span>
+                        <span class="gd-avg-status">${isApproved ? '<i class="fas fa-check"></i> Aprobado' : notaTrimestral !== null ? '<i class="fas fa-clock"></i> En proceso' : ''}</span>
                     </div>
                 </div>
                 <div class="gd-body">
@@ -307,6 +383,28 @@ function openGradesDetailModal(subjectId, subjectName, trimestre) {
     requestAnimationFrame(() => {
         document.getElementById('gradesDetailOverlay').classList.add('visible');
     });
+}
+
+function renderGradeGroup(title, items, promedio, color) {
+    return `
+        <div class="gd-group">
+            <div class="gd-group-header" style="border-left-color:${color}">
+                <span class="gd-group-title"><i class="fas fa-list"></i> ${title}</span>
+                <span class="gd-group-avg" style="color:${color}">Promedio: ${promedio !== null ? promedio.toFixed(2) : 'Sin datos'}</span>
+            </div>
+            <div class="gd-items">
+                ${items.map(g => `
+                    <div class="gd-item">
+                        <div class="gd-item-left">
+                            <span class="gd-item-name">${escapeHtml(g.nombre || g.tipoActividad || 'Sin nombre')}</span>
+                            <span class="gd-item-date"><i class="fas fa-calendar-alt"></i> ${g.date || ''}</span>
+                        </div>
+                        <div class="gd-item-score" style="color:${color}">${g.score.toFixed(1)}</div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
 }
 
 function closeGradesDetailModal(event) {
@@ -422,7 +520,6 @@ document.getElementById('changePasswordForm')?.addEventListener('submit', async 
 // ==================== NAVEGACIÓN ====================
 document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.addEventListener('click', function () {
-        // Ignorar botones que no tengan data-view (como el de cambiar contraseña)
         if (!this.dataset.view) return;
         
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
@@ -434,6 +531,7 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
         if (view === 'comments') { loadCommentSubjects(); renderMyComments(); }
     });
 });
+
 // ==================== LOGOUT ====================
 async function logout() {
     try { await apiFetch('/auth/logout.php', { method: 'POST' }); } catch (e) {}

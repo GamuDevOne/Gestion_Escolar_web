@@ -914,3 +914,17 @@ body {
 .modal-content .close:hover {
     color: var(--crimson);
 }
+
+/* Ajuste de z-index para que el modal de SweetAlert (1060) esté por encima */
+#studentGradesModal {
+    z-index: 1050;
+}
+
+/* Asegurar que el overlay del modal no tape SweetAlert */
+.modal-overlay, .gd-modal-overlay {
+    z-index: 1049;
+}
+/* Asegurar que SweetAlert esté por encima de los modales */
+.swal2-container {
+    z-index: 99999 !important;
+}
