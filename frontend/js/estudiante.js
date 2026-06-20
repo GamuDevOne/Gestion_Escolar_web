@@ -74,7 +74,7 @@ function normalizeGrade(g) {
     return {
         id: g.id,
         subjectId: parseInt(g.materia_id),
-        type: g.tipo,                     // 'PARCIAL' | 'EXAMEN_TRIMESTRAL' | 'APRECIACION'
+        type: g.tipo,
         tipoActividad: g.tipo_actividad || '',
         nombre: g.nombre || '',
         score: parseFloat(g.puntaje),
@@ -89,7 +89,7 @@ function getGradesForSubjectTrimestre(subjectId, trimestre) {
     return myGrades.filter(g => g.subjectId === subjectId && g.trimestre === trimestre);
 }
 
-// ==================== NUEVAS FUNCIONES DE CÁLCULO ====================
+// ==================== FUNCIONES DE CÁLCULO ====================
 function calcularNotaTrimestral(subjectId, trimestre) {
     const grades = myGrades.filter(g => g.subjectId === subjectId && g.trimestre === trimestre);
     
@@ -132,14 +132,22 @@ function generarResumenTrimestre(subjectId, trimestre) {
     return { promParciales, promApreciacion, examen, notaTrimestral };
 }
 
+// ==================== PROMEDIO SIMPLE PARA DASHBOARD ====================
+function calcularPromedioSimple(subjectId) {
+    const grades = myGrades.filter(g => g.subjectId === subjectId);
+    if (grades.length === 0) return null;
+    const sum = grades.reduce((s, g) => s + g.score, 0);
+    return sum / grades.length;
+}
+
 // ==================== DASHBOARD ====================
 function updateDashboard() {
     document.getElementById('mySubjectsCount').textContent = mySubjects.length;
     
-    // Promedio general: promedio de los promedios finales de cada materia (solo si completos)
+    // Promedio general con promedio simple
     let total = 0, count = 0;
     for (const subject of mySubjects) {
-        const avg = calcularPromedioFinal(subject.id);
+        const avg = calcularPromedioSimple(subject.id);
         if (avg !== null) {
             total += avg;
             count++;
@@ -147,10 +155,10 @@ function updateDashboard() {
     }
     document.getElementById('myAverage').textContent = count > 0 ? (total / count).toFixed(1) : 0;
     
-    // Materias aprobadas: aquellas con promedio final >= 3 (solo si completas)
+    // Materias aprobadas con promedio simple >= 3
     let approved = 0;
     for (const subject of mySubjects) {
-        const avg = calcularPromedioFinal(subject.id);
+        const avg = calcularPromedioSimple(subject.id);
         if (avg !== null && avg >= 3) approved++;
     }
     document.getElementById('approvedCount').textContent = approved;
@@ -160,10 +168,10 @@ function updateDashboard() {
 function renderGradesReport() {
     const container = document.getElementById('gradesReport');
     
-    // Promedio general
+    // Promedio general con promedio simple
     let total = 0, count = 0;
     for (const subject of mySubjects) {
-        const avg = calcularPromedioFinal(subject.id);
+        const avg = calcularPromedioSimple(subject.id);
         if (avg !== null) {
             total += avg;
             count++;
@@ -207,7 +215,6 @@ function renderGradesReport() {
 }
 
 function renderTrimestreSection(trimestre) {
-    // Ahora hasAnyGrade se basa en si hay notas individuales, no en nota trimestral
     let hasAnyGrade = false;
     let trimestreTotal = 0;
     let trimestreCount = 0;
@@ -234,7 +241,7 @@ function renderTrimestreSection(trimestre) {
                 <div class="trimestre-average">
                     ${trimestreAvg !== null
                         ? `<span class="value">Promedio: ${trimestreAvg}</span>`
-                        : `<span class="empty"><i class="fas fa-chart-simple"></i> ${hasAnyGrade ? 'Notas incompletas' : 'Sin notas registradas'}</span>`
+                        : `<span class="empty"><i class="fas fa-chart-simple"></i> ${hasAnyGrade ? 'Notas registradas' : 'Sin notas registradas'}</span>`
                     }
                 </div>
             </div>
