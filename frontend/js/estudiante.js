@@ -9,13 +9,15 @@ const TRIMESTRES = ['I Trimestre', 'II Trimestre', 'III Trimestre'];
 // Función global para cerrar modal
 window.closeModal = function(modalId) {
     const modal = document.getElementById(modalId);
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
 };
-
-// Función global para abrir modal de cambio de contraseña
-window.openChangePasswordModal = function() {
+window.openChangePasswordModal = function() { // Abrir modal de cambio de contraseña
     document.getElementById('changePasswordForm').reset();
     document.getElementById('changePasswordModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
 };
 
 // ==================== CARGA DE DATOS ====================
@@ -543,6 +545,12 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
         document.getElementById(`${view}View`).classList.add('active');
         if (view === 'grades')   renderGradesReport();
         if (view === 'comments') { loadCommentSubjects(); renderMyComments(); }
+    });
+});
+
+window.addEventListener('click', function (event) { // Cerrar modales al hacer clic fuera de ellos
+    document.querySelectorAll('.modal').forEach(modal => {
+        if (event.target === modal) closeModal(modal.id);
     });
 });
 

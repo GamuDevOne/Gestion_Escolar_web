@@ -10,15 +10,17 @@ let currentSubjectId       = null;
 let currentStudentForModal = null;
 let currentTrimestre       = 'I Trimestre';
 
-
 window.closeModal = function(modalId) {
     const modal = document.getElementById(modalId);
-    if (modal) modal.style.display = 'none';
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
 };
-
 window.openChangePasswordModal = function() {
     document.getElementById('changePasswordForm').reset();
     document.getElementById('changePasswordModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
 };
 
 // ==================== NORMALIZACIÓN ====================
@@ -631,28 +633,8 @@ async function addNewGrade() {
         });
 
         if (res.ok) {
-            const result = await res.json();
-            const subject = mySubjects.find(s => s.id === currentSubjectId);
-            myGrades.push({
-                id: result.id,
-                studentId: currentStudentForModal.id,
-                subjectId: currentSubjectId,
-                type,
-                tipoActividad,
-                nombre,
-                score,
-                trimestre,
-                comment,
-                date: new Date().toISOString().split('T')[0],
-                studentName: currentStudentForModal.name,
-                subjectName: subject?.name || ''
-            });
-
             Swal.fire({ title: '¡Nota registrada!', icon: 'success', timer: 1500, showConfirmButton: false, toast: true, position: 'top-end' });
-            renderTrimestreContent();
-            renderStudentsByGrade();
-            updateQuickStats();
-            updateDashboard();
+            await reloadGradesAndRefresh();
         } else {
             const error = await res.json();
             if (res.status === 409) {
@@ -687,12 +669,8 @@ async function deleteGrade(gradeId) {
         try {
             const res = await apiFetch('/notas/', { method: 'DELETE', body: JSON.stringify({ id: gradeId }) });
             if (res.ok) {
-                myGrades = myGrades.filter(g => g.id !== gradeId);
                 Swal.fire({ title: 'Nota eliminada', icon: 'success', timer: 1200, showConfirmButton: false });
-                renderTrimestreContent();
-                renderStudentsByGrade();
-                updateQuickStats();
-                updateDashboard();
+                await reloadGradesAndRefresh();
             } else {
                 const error = await res.json();
                 Swal.fire('Error', error.error || 'No se pudo eliminar', 'error');
@@ -701,6 +679,18 @@ async function deleteGrade(gradeId) {
             Swal.fire('Error', error.message, 'error');
         }
     }
+}
+
+async function reloadGradesAndRefresh() { //recarga las notas desde el servidor y actualiza la vista
+    const gradesRes = await apiFetch('/notas/');
+    const gradesJson = await gradesRes.json();
+    const allGrades = gradesJson.data ?? gradesJson;
+    myGrades = allGrades.map(normalizeGrade);
+
+    renderTrimestreContent();
+    renderStudentsByGrade();
+    updateQuickStats();
+    updateDashboard();
 }
 
 // ==================== COMENTARIOS ====================
@@ -721,11 +711,6 @@ function renderComments() {
             <div class="date"><i class="fas fa-calendar-alt"></i> ${c.fecha ? c.fecha.split(' ')[0] : ''}</div>
         </div>
     `).join('');
-}
-
-function openChangePasswordModal() {
-    document.getElementById('changePasswordForm').reset();
-    document.getElementById('changePasswordModal').style.display = 'flex';
 }
 
 document.getElementById('changePasswordForm')?.addEventListener('submit', async function(e) {
@@ -779,10 +764,17 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
     });
 });
 
-window.onclick = function (event) {
-    const modal = document.getElementById('studentGradesModal');
-    if (event.target === modal) closeStudentModal();
-};
+window.addEventListener('click', function (event) {// Cerrar modales al hacer clic fuera de ellos
+    if (event.target.id === 'studentGradesModal') {
+        closeStudentModal();
+        return;
+    }
+    document.querySelectorAll('.modal').forEach(modal => {
+        if (event.target === modal && modal.id !== 'studentGradesModal') {
+            closeModal(modal.id);
+        }
+    });
+});
 
 // ==================== LOGOUT ====================
 async function logout() {

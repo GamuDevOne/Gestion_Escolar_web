@@ -672,6 +672,8 @@ body {
     padding: 30px;
     width: 90%;
     max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
     position: relative;
     border: 1px solid var(--gold);
     box-shadow: 0 20px 40px rgba(0,0,0,0.4);
@@ -752,4 +754,8 @@ body {
     text-overflow: ellipsis;
     display: inline-block;
     vertical-align: middle;
+}
+
+.swal2-container {
+    z-index: 99999 !important;
 }

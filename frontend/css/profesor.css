@@ -393,6 +393,9 @@ body {
     letter-spacing: 0.12em;
     text-transform: uppercase;
 }
+.form-group {
+    margin-bottom: 18px;
+}
 
 .form-group select,
 .form-group input,
@@ -935,20 +938,21 @@ body {
 .btn-cambiar-pass {
     background: transparent;
     border: 1px solid rgba(139,0,0,0.4);
-    padding: 13px 18px;
+    padding: 13px 14px;
     border-radius: 2px;
     font-family: 'Cinzel', serif;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 400;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     color: rgba(230,210,180,0.75);
     cursor: pointer;
     transition: all 0.25s ease;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     width: 100%;
     margin-bottom: 8px;
+    white-space: nowrap;
 }
 
 .btn-cambiar-pass i {
