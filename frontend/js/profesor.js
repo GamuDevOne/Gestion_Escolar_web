@@ -9,6 +9,7 @@ let myStudents            = [];
 let currentSubjectId       = null;
 let currentStudentForModal = null;
 let currentTrimestre       = 'I Trimestre';
+let studentGradeSearch     = '';
 
 window.closeModal = function(modalId) {
     const modal = document.getElementById(modalId);
@@ -138,6 +139,14 @@ function getStudentsForSubject(subjectId) {
     return myStudents.filter(s => studentIds.includes(s.id));
 }
 
+function filterStudentSearch(s) {//justifica si un estudiante coincide con la búsqueda global
+    if (!studentGradeSearch) return true;
+    const q = studentGradeSearch.toLowerCase();
+    return (s.name || '').toLowerCase().includes(q) ||
+           (s.email || '').toLowerCase().includes(q) ||
+           (s.seccion || '').toLowerCase().includes(q);
+}
+
 function getGradesForStudent(studentId, subjectId = null, trimestre = null) {
     let grades = myGrades.filter(g => g.studentId === studentId);
     if (subjectId) grades = grades.filter(g => g.subjectId === subjectId);
@@ -250,6 +259,11 @@ function changeSubject() {
         document.getElementById('quickStats').style.display = 'none';
     }
 }
+// ==================== BÚSQUEDA DE ESTUDIANTES ====================
+document.getElementById('searchStudentGrade')?.addEventListener('input', function (e) {
+    studentGradeSearch = e.target.value;
+    if (currentSubjectId) renderStudentsByGrade();
+});
 
 // ==================== DASHBOARD ESTADÍSTICAS (CORREGIDO) ====================
 function updateQuickStats() {
@@ -294,13 +308,13 @@ function updateQuickStats() {
 }
 
 function renderStudentsByGrade() {
-    const students    = getStudentsForSubject(currentSubjectId);
+    const students    = getStudentsForSubject(currentSubjectId).filter(filterStudentSearch);
     const container   = document.getElementById('studentsByGrade');
     const gradesOrder = ['9°', '10°', '11°', '12°'];
     const grouped     = {};
 
     if (students.length === 0) {
-        container.innerHTML = '<div class="card" style="text-align:center; padding:40px;"><i class="fas fa-user-graduate"></i> No hay estudiantes matriculados en esta materia</div>';
+        container.innerHTML = `<div class="card" style="text-align:center; padding:40px;"><i class="fas fa-user-graduate"></i> ${studentGradeSearch ? 'No se encontraron estudiantes con ese criterio' : 'No hay estudiantes matriculados en esta materia'}</div>`;
         return;
     }
 

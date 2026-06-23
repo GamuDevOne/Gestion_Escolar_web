@@ -78,11 +78,15 @@
                 
                 <div class="grades-panel">
                     <div class="filter-bar">
-                        <div class="form-group" style="flex:2">
+                        <div class="form-group" style="flex:1">
                             <label for="gradeSubject"><i class="fas fa-book-open"></i> Seleccionar Materia</label>
                             <select id="gradeSubject" title="Seleccionar materia" onchange="changeSubject()">
                                 <option value="">-- Seleccionar una materia --</option>
                             </select>
+                        </div>
+                        <div class="form-group" style="flex:2">
+                            <label for="searchStudentGrade"><i class="fas fa-search"></i> Buscar Estudiante</label>
+                            <input type="text" id="searchStudentGrade" placeholder="Buscar por nombre, email o sección...">
                         </div>
                     </div>
                 </div>
