@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Pro — Gestión Escolar</title>
+    <title>Admin — Gestión Escolar</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- SweetAlert + Font Awesome para mejor UX -->
@@ -15,10 +15,10 @@
     <div class="app-container">
         <aside class="sidebar">
             <div class="sidebar-header">
-                <div class="logo"> Admin Pro</div>
+                <div class="logo"> Administrador</div>
                 <div class="user-info">
                     <span class="user-avatar"><i class="fas fa-user-tie"></i></span>
-                    <span id="adminName">Administrador</span>
+                    <span id="adminName">Admin</span>
                 </div>
             </div>
             <nav class="nav-menu">
@@ -181,16 +181,16 @@
         <h3><i class="fas fa-key"></i> Cambiar Contraseña</h3>
         <form id="changePasswordForm">
             <div class="form-group">
-                <label>Contraseña actual</label>
-                <input type="password" id="cpActual" required>
+                <label for="cpActual">Contraseña actual</label>
+                <input type="password" id="cpActual" title="Contraseña actual" placeholder="Ingresa tu contraseña actual" required>
             </div>
             <div class="form-group">
-                <label>Nueva contraseña</label>
-                <input type="password" id="cpNueva" required>
+                <label for="cpNueva">Nueva contraseña</label>
+                <input type="password" id="cpNueva" title="Nueva contraseña" placeholder="Ingresa la nueva contraseña" required>
             </div>
             <div class="form-group">
-                <label>Confirmar nueva contraseña</label>
-                <input type="password" id="cpConfirmar" required>
+                <label for="cpConfirmar">Confirmar nueva contraseña</label>
+                <input type="password" id="cpConfirmar" title="Confirmar nueva contraseña" placeholder="Confirma la nueva contraseña" required>
             </div>
             <button type="submit" class="btn-primary">Guardar</button>
         </form>

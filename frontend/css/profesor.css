@@ -710,6 +710,7 @@ body {
     flex-wrap: wrap;
     gap: 18px;
     align-items: flex-end;
+    margin-bottom: 18px;
 }
 
 .grade-form-row .form-group {
@@ -927,4 +928,41 @@ body {
 /* Asegurar que SweetAlert esté por encima de los modales */
 .swal2-container {
     z-index: 99999 !important;
+}
+
+/* ========== BOTÓN CAMBIAR CONTRASEÑA SIDEBAR ========== */
+
+.btn-cambiar-pass {
+    background: transparent;
+    border: 1px solid rgba(139,0,0,0.4);
+    padding: 13px 18px;
+    border-radius: 2px;
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    color: rgba(230,210,180,0.75);
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+.btn-cambiar-pass i {
+    width: 18px;
+    color: var(--gold);
+    opacity: 0.6;
+}
+
+.btn-cambiar-pass:hover {
+    background: rgba(139,0,0,0.3);
+    color: var(--gold-light);
+    border-color: var(--crimson);
+}
+
+.btn-cambiar-pass:hover i {
+    opacity: 1;
 }

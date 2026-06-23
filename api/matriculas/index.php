@@ -39,10 +39,11 @@ if ($method === 'GET') {
 
     $selectFields = "
         SELECT m.id, m.estudiante_id AS studentId, m.materia_id AS subjectId,
-               m.fecha_asignacion AS enrollmentDate,
-               e.nombre AS studentName, e.grado AS studentGrade, e.email AS studentEmail,
-               s.nombre AS subjectName, s.codigo AS subjectCode,
-               p.nombre AS teacherName
+           m.fecha_asignacion AS enrollmentDate,
+           e.nombre AS studentName, e.grado AS studentGrade, e.email AS studentEmail,
+           e.seccion AS studentSeccion,
+           s.nombre AS subjectName, s.codigo AS subjectCode,
+           p.nombre AS teacherName
     ";
 
     // Profesor y estudiante reciben todo sin paginar

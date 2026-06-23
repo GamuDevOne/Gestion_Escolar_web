@@ -351,13 +351,13 @@ function openGradesDetailModal(subjectId, subjectName, trimestre) {
         // Resumen final (solo si hay notas)
         contentHtml += `
             <div style="margin-top: 20px; border-top: 2px solid var(--parchment); padding-top: 16px;">
-                <table style="width:100%; border-collapse: collapse;">
-                    <tr><td><strong>Promedio Parciales:</strong></td><td>${resumen.promParciales !== null ? resumen.promParciales.toFixed(2) : 'Sin datos'}</td></tr>
-                    <tr><td><strong>Promedio Apreciación:</strong></td><td>${resumen.promApreciacion !== null ? resumen.promApreciacion.toFixed(2) : 'Sin datos'}</td></tr>
-                    <tr><td><strong>Examen Trimestral:</strong></td><td>${resumen.examen !== null ? resumen.examen.toFixed(2) : 'Sin registrar'}</td></tr>
-                    <tr style="font-weight:bold; border-top: 2px solid var(--crimson);">
-                        <td>Nota Trimestral</td>
-                        <td>${notaTrimestral !== null ? notaTrimestral.toFixed(2) : '<span style="color:#8a7055;">En curso</span>'}</td>
+                <table style="width:100%; border-collapse:collapse; max-width:420px; margin:0 auto;">
+                    <tr><td style="padding:6px 0; color:var(--ink-soft);"><strong>Promedio Parciales:</strong></td><td style="text-align:right; font-family:'Cinzel',serif; color:var(--crimson);">${resumen.promParciales !== null ? resumen.promParciales.toFixed(2) : 'Sin datos'}</td></tr>
+                    <tr><td style="padding:6px 0; color:var(--ink-soft);"><strong>Promedio Apreciación:</strong></td><td style="text-align:right; font-family:'Cinzel',serif; color:var(--crimson);">${resumen.promApreciacion !== null ? resumen.promApreciacion.toFixed(2) : 'Sin datos'}</td></tr>
+                    <tr><td style="padding:6px 0; color:var(--ink-soft);"><strong>Examen Trimestral:</strong></td><td style="text-align:right; font-family:'Cinzel',serif; color:var(--crimson);">${resumen.examen !== null ? resumen.examen.toFixed(2) : 'Sin registrar'}</td></tr>
+                    <tr style="border-top:2px solid var(--crimson);">
+                    <td style="padding:10px 0; font-family:'Cinzel',serif; font-weight:bold; color:var(--crimson-deep);">Nota Trimestral</td>
+                    <td style="text-align:right; font-family:'Cinzel',serif; font-size:18px; font-weight:bold; color:var(--crimson-deep);">${notaTrimestral !== null ? notaTrimestral.toFixed(2) : '<span style="color:#8a7055; font-size:14px;">En curso</span>'}</td>
                     </tr>
                 </table>
             </div>
@@ -387,6 +387,9 @@ function openGradesDetailModal(subjectId, subjectName, trimestre) {
     const existing = document.getElementById('gradesDetailOverlay');
     if (existing) existing.remove();
     document.body.insertAdjacentHTML('beforeend', modalHtml);
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+    document.body.style.overflow = 'hidden';
+    document.body.style.paddingRight = scrollbarWidth + 'px';
     requestAnimationFrame(() => {
         document.getElementById('gradesDetailOverlay').classList.add('visible');
     });
@@ -419,7 +422,11 @@ function closeGradesDetailModal(event) {
     const overlay = document.getElementById('gradesDetailOverlay');
     if (overlay) {
         overlay.classList.remove('visible');
-        overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+        overlay.addEventListener('transitionend', () => {
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+            overlay.remove();
+        }, { once: true });
     }
 }
 

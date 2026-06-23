@@ -43,8 +43,7 @@ window.addEventListener('click', function(event) {
     const modals = document.querySelectorAll('.modal');
     modals.forEach(modal => {
         if (event.target === modal) {
-            modal.style.display = 'none';
-            document.body.style.overflow = '';
+            closeModal(modal.id);
         }
     });
 });
@@ -363,7 +362,7 @@ function openStudentModal() {
     document.getElementById('studentPassword').value = generatePassword();
     document.getElementById('studentPassword').readOnly = true;
     document.getElementById('studentPassword').classList.remove('password-editable');
-    document.getElementById('studentModal').style.display = 'flex';
+    openModal('studentModal');
 }
 
 function editStudent(id) {
@@ -378,7 +377,7 @@ function editStudent(id) {
     document.getElementById('studentEmail').value          = s.email;
     document.getElementById('studentGrade').value          = s.grade;
     document.getElementById('studentSeccion').value        = s.seccion || '';
-    document.getElementById('studentModal').style.display  = 'flex';
+    openModal('studentModal');
 }
 
 async function deleteStudent(id) {
@@ -468,7 +467,7 @@ function openProfessorModal() {
     document.getElementById('professorPassword').value = generatePassword();
     document.getElementById('professorPassword').readOnly = true;
     document.getElementById('professorPassword').classList.remove('password-editable');
-    document.getElementById('professorModal').style.display = 'flex';
+    openModal('professorModal');
 }
 
 function editTeacher(id) {
@@ -485,7 +484,7 @@ function editTeacher(id) {
     document.getElementById('professorName').value           = t.name;
     document.getElementById('professorEmail').value          = t.email;
     document.getElementById('professorSpecialty').value      = t.specialty;
-    document.getElementById('professorModal').style.display  = 'flex';
+    openModal('professorModal');
 }
 
 async function deleteTeacher(id) {
@@ -571,7 +570,7 @@ function openSubjectModal() {
     document.getElementById('subjectForm').reset();
     document.getElementById('subjectId').value      = '';
     document.getElementById('subjectCredits').value = 3;
-    document.getElementById('subjectModal').style.display = 'flex';
+    openModal('subjectModal');
 }
 
 function editSubject(id) {
@@ -584,7 +583,7 @@ function editSubject(id) {
     document.getElementById('subjectCode').value    = s.code;
     document.getElementById('subjectName').value    = s.name;
     document.getElementById('subjectCredits').value = s.credits;
-    document.getElementById('subjectModal').style.display = 'flex';
+    openModal('subjectModal');
 }
 
 async function deleteSubject(id) {
@@ -688,7 +687,7 @@ async function deleteEnrollment(id) {
 function openEnrollmentModal() {
     updateEnrollmentSelects();
     document.getElementById('enrollmentForm').reset();
-    document.getElementById('enrollmentModal').style.display = 'flex';
+    openModal('enrollmentModal');
 }
 
 document.getElementById('enrollmentForm')?.addEventListener('submit', async function (e) {

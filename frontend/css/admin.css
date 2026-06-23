@@ -741,3 +741,15 @@ body {
 .btn-cambiar-pass:hover i {
     opacity: 1;
 }
+
+.data-table td:last-child {
+    white-space: nowrap;
+}
+
+.password-badge {
+    max-width: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+    vertical-align: middle;
+}

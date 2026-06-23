@@ -75,7 +75,7 @@ async function loadData() {
             apiFetch('/notas/'),
             apiFetch('/comentarios/')
         ]);
-
+             //mensajes espesificos
         if (!subjectsRes.ok) throw new Error('Error cargando materias');
         if (!enrollmentsRes.ok) throw new Error('Error cargando matrículas');
         if (!gradesRes.ok) throw new Error('Error cargando notas');
@@ -371,10 +371,12 @@ function openStudentGradesModal(studentId) {
     if (!currentStudentForModal) return;
     renderStudentModal();
     document.getElementById('studentGradesModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
 }
 
 function closeStudentModal() {
     document.getElementById('studentGradesModal').style.display = 'none';
+    document.body.style.overflow = '';
 }
 
 function renderStudentModal() {
@@ -385,14 +387,15 @@ function renderStudentModal() {
         <div class="student-header">
             <div class="student-avatar"><i class="fas fa-user-graduate"></i></div>
             <div class="student-details">
-                <h3>${escapeHtml(currentStudentForModal.name)}</h3>
-                <p><i class="fas fa-envelope"></i> ${escapeHtml(currentStudentForModal.email || '')} | <i class="fas fa-graduation-cap"></i> Grado ${currentStudentForModal.grade} ${currentStudentForModal.seccion ? ' - Sección ' + escapeHtml(currentStudentForModal.seccion) : ''}</p>
+                <h3>${escapeHtml(currentStudentForModal.name)}${currentStudentForModal.seccion ? `<span style="font-size:14px; font-weight:400; color:#8a7055; margin-left:10px;">— Sección
+                     ${escapeHtml(currentStudentForModal.seccion)}</span>` : ''}</h3>
+                <p><i class="fas fa-envelope"></i> ${escapeHtml(currentStudentForModal.email || '')} | <i class="fas fa-graduation-cap"></i> Grado ${currentStudentForModal.grade}</p>
                 <p><i class="fas fa-book"></i> ${escapeHtml(subject?.name || '')} (${subject?.code || ''})</p>
             </div>
         </div>
         <div class="trimestre-tabs">
             ${['I Trimestre', 'II Trimestre', 'III Trimestre', 'Todas'].map(t => `
-                <button class="trimestre-tab ${currentTrimestre === t ? 'active' : ''}" onclick="changeTrimestre('${t}')">
+                <button class="trimestre-tab ${currentTrimestre === t ? 'active' : ''}" data-trimestre="${t}" onclick="changeTrimestre('${t}')">
                     <i class="fas fa-calendar-alt"></i> ${t}
                 </button>
             `).join('')}
@@ -508,13 +511,13 @@ function renderTrimestreContent() {
         container.innerHTML += `
             <div style="margin-top: 20px; border-top: 2px solid var(--parchment); padding-top: 16px;">
                 <h4 style="font-family: 'Cinzel', serif; color: var(--crimson-deep);">Resumen del Trimestre</h4>
-                <table style="width:100%; border-collapse: collapse; margin-top:10px;">
-                    <tr><td style="padding:6px 0;"><strong>Promedio Parciales</strong></td><td>${resumen.promParciales !== null ? resumen.promParciales.toFixed(2) : 'Sin datos'}</td></tr>
-                    <tr><td style="padding:6px 0;"><strong>Promedio Apreciación</strong></td><td>${resumen.promApreciacion !== null ? resumen.promApreciacion.toFixed(2) : 'Sin datos'}</td></tr>
-                    <tr><td style="padding:6px 0;"><strong>Examen Trimestral</strong></td><td>${resumen.examen !== null ? resumen.examen.toFixed(2) : 'Sin registrar'}</td></tr>
-                    <tr style="font-weight:bold; border-top: 2px solid var(--crimson);">
-                        <td style="padding:10px 0;">Nota Trimestral</td>
-                        <td>${resumen.notaTrimestral !== null ? resumen.notaTrimestral.toFixed(2) : '<span style="color:#8a7055;">En curso</span>'}</td>
+                <table style="width:100%; border-collapse:collapse; max-width:420px; margin:0 auto;">
+                    <tr><td style="padding:6px 0; color:var(--ink-soft);"><strong>Promedio Parciales</strong></td><td style="text-align:right; font-family:'Cinzel',serif; color:var(--crimson);">${resumen.promParciales !== null ? resumen.promParciales.toFixed(2) : 'Sin datos'}</td></tr>
+                    <tr><td style="padding:6px 0; color:var(--ink-soft);"><strong>Promedio Apreciación</strong></td><td style="text-align:right; font-family:'Cinzel',serif; color:var(--crimson);">${resumen.promApreciacion !== null ? resumen.promApreciacion.toFixed(2) : 'Sin datos'}</td></tr>
+                    <tr><td style="padding:6px 0; color:var(--ink-soft);"><strong>Examen Trimestral</strong></td><td style="text-align:right; font-family:'Cinzel',serif; color:var(--crimson);">${resumen.examen !== null ? resumen.examen.toFixed(2) : 'Sin registrar'}</td></tr>
+                    <tr style="font-weight:bold; border-top:2px solid var(--crimson);">
+                        <td style="padding:10px 0; font-family:'Cinzel',serif; color:var(--crimson-deep);">Nota Trimestral</td>
+                        <td style="text-align:right; font-family:'Cinzel',serif; font-size:18px; color:var(--crimson-deep);">${resumen.notaTrimestral !== null ? resumen.notaTrimestral.toFixed(2) : '<span style="color:#8a7055; font-size:14px;">En curso</span>'}</td>
                     </tr>
                 </table>
             </div>
@@ -552,11 +555,11 @@ function renderGradeHistoryItem(grade) {
             <div class="grade-info">
                 <div>
                     <span class="grade-type-badge ${grade.type}">${typeLabels[grade.type] || grade.type}</span>
+                    ${grade.tipoActividad ? `<span class="badge" style="background:var(--ivory-dark); padding:2px 8px; border-radius:2px; margin-left:6px;">${escapeHtml(grade.tipoActividad)}</span>` : ''}
                     <span class="grade-score">${grade.score.toFixed(1)}</span>
                 </div>
                 <div style="font-size:13px; color:var(--ink-soft); margin-top:4px;">
                     <strong>${escapeHtml(nombreDisplay)}</strong>
-                    ${grade.tipoActividad ? `<span class="badge" style="background:var(--ivory-dark); padding:2px 8px; border-radius:2px; margin-left:6px;">${escapeHtml(grade.tipoActividad)}</span>` : ''}
                 </div>
                 ${grade.comment ? `<div class="grade-comment"><i class="fas fa-quote-left"></i> ${escapeHtml(grade.comment)}</div>` : ''}
                 <div class="grade-date"><i class="fas fa-calendar-alt"></i> ${grade.date} | ${grade.trimestre}</div>
@@ -573,8 +576,7 @@ function renderGradeHistoryItem(grade) {
 function changeTrimestre(trimestre) {
     currentTrimestre = trimestre;
     document.querySelectorAll('.trimestre-tab').forEach(tab => {
-        const label = trimestre === 'Todas' ? 'Todas' : trimestre;
-        tab.classList.toggle('active', tab.textContent.trim().includes(label));
+        tab.classList.toggle('active', tab.dataset.trimestre === trimestre);
     });
     renderTrimestreContent();
 }

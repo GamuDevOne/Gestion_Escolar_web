@@ -7,8 +7,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="css/profesor.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
     <div class="app-container">
@@ -27,9 +27,9 @@
                 <button class="nav-btn" data-view="comments"><i class="fas fa-comments"></i> <span> Comentarios</span></button>
             </nav>
 
-            <button class="nav-btn" onclick="openChangePasswordModal()">
-    <i class="fas fa-key"></i> <span> Cambiar contraseña</span>
-</button>
+            <button class="btn-cambiar-pass" onclick="openChangePasswordModal()">
+                <i class="fas fa-key"></i> <span> Cambiar contraseña</span>
+            </button>
             <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> <span> Cerrar sesión</span></button>
         </aside>
 
@@ -61,7 +61,7 @@
                     </div>
                 </div>
                 <div class="welcome-card">
-                    <h3><i class="fas fa-star"></i> Bienvenida, <span id="welcomeName"></span></h3>
+                    <h3><i class="fas fa-star"></i>Le damos la Bienvenida, <span id="welcomeName"></span></h3>
                     <p><i class="fas fa-heart"></i> Hoy es un día maravilloso para enseñar y aprender <i class="fas fa-heart"></i></p>
                 </div>
             </div>
@@ -131,16 +131,16 @@
         <h3><i class="fas fa-key"></i> Cambiar Contraseña</h3>
         <form id="changePasswordForm">
             <div class="form-group">
-                <label>Contraseña actual</label>
-                <input type="password" id="cpActual" required>
+                <label for="cpActual">Contraseña actual</label>
+                <input type="password" id="cpActual" title="Contraseña actual" placeholder="Ingresa tu contraseña actual" required>
             </div>
             <div class="form-group">
-                <label>Nueva contraseña</label>
-                <input type="password" id="cpNueva" required>
+                <label for="cpNueva">Nueva contraseña</label>
+                <input type="password" id="cpNueva" title="Nueva contraseña" placeholder="Ingresa la nueva contraseña" required>
             </div>
             <div class="form-group">
-                <label>Confirmar nueva contraseña</label>
-                <input type="password" id="cpConfirmar" required>
+                <label for="cpConfirmar">Confirmar nueva contraseña</label>
+                <input type="password" id="cpConfirmar" title="Confirmar nueva contraseña" placeholder="Confirma la nueva contraseña" required>
             </div>
             <button type="submit" class="btn-primary">Guardar</button>
         </form>

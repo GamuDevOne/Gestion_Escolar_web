@@ -1017,24 +1017,21 @@ body {
 /* ========== BOTÓN CAMBIAR CONTRASEÑA SIDEBAR ========== */
 .btn-cambiar-pass {
     background: transparent;
-    border: none;
-    padding: 13px 16px;
-    text-align: left;
+    border: 1px solid rgba(139,0,0,0.4);
+    padding: 13px 18px;
+    border-radius: 2px;
     font-family: 'Cinzel', serif;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 400;
     letter-spacing: 0.08em;
     color: rgba(230,210,180,0.75);
-    border-radius: 2px;
     cursor: pointer;
-    transition: all 0.22s ease;
+    transition: all 0.25s ease;
     display: flex;
     align-items: center;
     gap: 12px;
-    border-left: 2px solid transparent;
     width: 100%;
-    margin-top: 12px;
-    margin-bottom: 4px;
+    margin-bottom: 8px;
 }
 
 .btn-cambiar-pass i {
@@ -1044,10 +1041,9 @@ body {
 }
 
 .btn-cambiar-pass:hover {
-    background: rgba(201,168,76,0.08);
+    background: rgba(139,0,0,0.3);
     color: var(--gold-light);
-    border-left-color: rgba(201,168,76,0.4);
-    padding-left: 20px;
+    border-color: var(--crimson);
 }
 
 .btn-cambiar-pass:hover i {
