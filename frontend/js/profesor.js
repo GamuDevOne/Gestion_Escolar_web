@@ -308,7 +308,7 @@ function updateQuickStats() {
 function renderStudentsByGrade() {
     const students    = getStudentsForSubject(currentSubjectId).filter(filterStudentSearch);
     const container   = document.getElementById('studentsByGrade');
-    const gradesOrder = ['9°', '10°', '11°', '12°'];
+    const gradesOrder = ['7°', '8°', '9°', '10°', '11°', '12°'];
     const grouped     = {};
 
     if (students.length === 0) {
