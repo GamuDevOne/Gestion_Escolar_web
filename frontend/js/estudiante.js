@@ -14,7 +14,7 @@ window.closeModal = function(modalId) {
         document.body.style.overflow = '';
     }
 };
-window.openChangePasswordModal = function() { // Abrir modal de cambio de contraseña
+window.openChangePasswordModal = function() {
     document.getElementById('changePasswordForm').reset();
     document.getElementById('changePasswordModal').style.display = 'flex';
     document.body.style.overflow = 'hidden';
@@ -56,7 +56,6 @@ async function loadData() {
         myGrades = gradesJson.data?.map ? gradesJson.data.map(normalizeGrade) : gradesJson.map(normalizeGrade);
         mySubjects = subjectsJson.data ?? subjectsJson;
 
-        // Filtrar materias en las que está matriculado
         const enrolledSubjectIds = myEnrollments.map(e => parseInt(e.subjectId));
         mySubjects = mySubjects.filter(s => enrolledSubjectIds.includes(parseInt(s.id)));
 
@@ -146,7 +145,6 @@ function calcularPromedioSimple(subjectId) {
 function updateDashboard() {
     document.getElementById('mySubjectsCount').textContent = mySubjects.length;
     
-    // Promedio general con promedio simple
     let total = 0, count = 0;
     for (const subject of mySubjects) {
         const avg = calcularPromedioSimple(subject.id);
@@ -157,7 +155,6 @@ function updateDashboard() {
     }
     document.getElementById('myAverage').textContent = count > 0 ? (total / count).toFixed(1) : 0;
     
-    // Materias aprobadas con promedio simple >= 3
     let approved = 0;
     for (const subject of mySubjects) {
         const avg = calcularPromedioSimple(subject.id);
@@ -170,7 +167,6 @@ function updateDashboard() {
 function renderGradesReport() {
     const container = document.getElementById('gradesReport');
     
-    // Promedio general con promedio simple
     let total = 0, count = 0;
     for (const subject of mySubjects) {
         const avg = calcularPromedioSimple(subject.id);
@@ -311,15 +307,12 @@ function openGradesDetailModal(subjectId, subjectName, trimestre) {
 
     let contentHtml = '';
 
-    // Parciales
     if (parciales.length) {
         contentHtml += renderGradeGroup('Parciales', parciales, resumen.promParciales, 'var(--crimson)');
     }
-    // Apreciación
     if (apreciaciones.length) {
         contentHtml += renderGradeGroup('Apreciación', apreciaciones, resumen.promApreciacion, 'var(--gold)');
     }
-    // Examen Trimestral
     if (examenes.length) {
         const examen = examenes[0];
         contentHtml += `
@@ -341,7 +334,6 @@ function openGradesDetailModal(subjectId, subjectName, trimestre) {
         `;
     }
 
-    // Si no hay ninguna nota, mostrar mensaje
     if (!parciales.length && !apreciaciones.length && !examenes.length) {
         contentHtml = `
             <div style="text-align:center; padding:40px; color:#8a7055;">
@@ -350,16 +342,15 @@ function openGradesDetailModal(subjectId, subjectName, trimestre) {
             </div>
         `;
     } else {
-        // Resumen final (solo si hay notas)
         contentHtml += `
             <div style="margin-top: 20px; border-top: 2px solid var(--parchment); padding-top: 16px;">
                 <table style="width:100%; border-collapse:collapse; max-width:420px; margin:0 auto;">
-                    <tr><td style="padding:6px 0; color:var(--ink-soft);"><strong>Promedio Parciales:</strong></td><td style="text-align:right; font-family:'Cinzel',serif; color:var(--crimson);">${resumen.promParciales !== null ? resumen.promParciales.toFixed(2) : 'Sin datos'}</td></tr>
-                    <tr><td style="padding:6px 0; color:var(--ink-soft);"><strong>Promedio Apreciación:</strong></td><td style="text-align:right; font-family:'Cinzel',serif; color:var(--crimson);">${resumen.promApreciacion !== null ? resumen.promApreciacion.toFixed(2) : 'Sin datos'}</td></tr>
-                    <tr><td style="padding:6px 0; color:var(--ink-soft);"><strong>Examen Trimestral:</strong></td><td style="text-align:right; font-family:'Cinzel',serif; color:var(--crimson);">${resumen.examen !== null ? resumen.examen.toFixed(2) : 'Sin registrar'}</td></tr>
+                    <tr><td style="padding:6px 0; color:var(--ink-soft);"><strong>Promedio Parciales:</strong></td><td style="text-align:right; font-family:'Cinzel',serif; color:var(--crimson);">${resumen.promParciales !== null ? resumen.promParciales.toFixed(1) : 'Sin datos'}</td></tr>
+                    <tr><td style="padding:6px 0; color:var(--ink-soft);"><strong>Promedio Apreciación:</strong></td><td style="text-align:right; font-family:'Cinzel',serif; color:var(--crimson);">${resumen.promApreciacion !== null ? resumen.promApreciacion.toFixed(1) : 'Sin datos'}</td></tr>
+                    <tr><td style="padding:6px 0; color:var(--ink-soft);"><strong>Examen Trimestral:</strong></td><td style="text-align:right; font-family:'Cinzel',serif; color:var(--crimson);">${resumen.examen !== null ? resumen.examen.toFixed(1) : 'Sin registrar'}</td></tr>
                     <tr style="border-top:2px solid var(--crimson);">
-                    <td style="padding:10px 0; font-family:'Cinzel',serif; font-weight:bold; color:var(--crimson-deep);">Nota Trimestral</td>
-                    <td style="text-align:right; font-family:'Cinzel',serif; font-size:18px; font-weight:bold; color:var(--crimson-deep);">${notaTrimestral !== null ? notaTrimestral.toFixed(2) : '<span style="color:#8a7055; font-size:14px;">En curso</span>'}</td>
+                        <td style="padding:10px 0; font-family:'Cinzel',serif; font-weight:bold; color:var(--crimson-deep);">Nota Trimestral</td>
+                        <td style="text-align:right; font-family:'Cinzel',serif; font-size:18px; font-weight:bold; color:var(--crimson-deep);">${notaTrimestral !== null ? notaTrimestral.toFixed(1) : '<span style="color:#8a7055; font-size:14px;">En curso</span>'}</td>
                     </tr>
                 </table>
             </div>
@@ -402,7 +393,7 @@ function renderGradeGroup(title, items, promedio, color) {
         <div class="gd-group">
             <div class="gd-group-header" style="border-left-color:${color}">
                 <span class="gd-group-title"><i class="fas fa-list"></i> ${title}</span>
-                <span class="gd-group-avg" style="color:${color}">Promedio: ${promedio !== null ? promedio.toFixed(2) : 'Sin datos'}</span>
+                <span class="gd-group-avg" style="color:${color}">Promedio: ${promedio !== null ? promedio.toFixed(1) : 'Sin datos'}</span>
             </div>
             <div class="gd-items">
                 ${items.map(g => `
@@ -548,7 +539,7 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
     });
 });
 
-window.addEventListener('click', function (event) { // Cerrar modales al hacer clic fuera de ellos
+window.addEventListener('click', function (event) {
     document.querySelectorAll('.modal').forEach(modal => {
         if (event.target === modal) closeModal(modal.id);
     });

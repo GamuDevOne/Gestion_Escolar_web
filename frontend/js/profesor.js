@@ -78,7 +78,7 @@ async function loadData() {
             apiFetch('/notas/'),
             apiFetch('/comentarios/')
         ]);
-             //mensajes espesificos
+
         if (!subjectsRes.ok) throw new Error('Error cargando materias');
         if (!enrollmentsRes.ok) throw new Error('Error cargando matrículas');
         if (!gradesRes.ok) throw new Error('Error cargando notas');
@@ -139,7 +139,7 @@ function getStudentsForSubject(subjectId) {
     return myStudents.filter(s => studentIds.includes(s.id));
 }
 
-function filterStudentSearch(s) {//justifica si un estudiante coincide con la búsqueda global
+function filterStudentSearch(s) {
     if (!studentGradeSearch) return true;
     const q = studentGradeSearch.toLowerCase();
     return (s.name || '').toLowerCase().includes(q) ||
@@ -259,13 +259,13 @@ function changeSubject() {
         document.getElementById('quickStats').style.display = 'none';
     }
 }
-// ==================== BÚSQUEDA DE ESTUDIANTES ====================
+
 document.getElementById('searchStudentGrade')?.addEventListener('input', function (e) {
     studentGradeSearch = e.target.value;
     if (currentSubjectId) renderStudentsByGrade();
 });
 
-// ==================== DASHBOARD ESTADÍSTICAS (CORREGIDO) ====================
+// ==================== DASHBOARD ESTADÍSTICAS ====================
 function updateQuickStats() {
     const students = getStudentsForSubject(currentSubjectId);
     let totalPromedios = 0, countWithGrades = 0;
@@ -281,7 +281,6 @@ function updateQuickStats() {
         const avg = calcularPromedioSimple(s.id, currentSubjectId);
 
         if (hasExam) {
-            // Si tiene examen, se evalúa por promedio
             if (avg !== null && avg >= 3) {
                 approved++;
             } else {
@@ -292,7 +291,6 @@ function updateQuickStats() {
                 countWithGrades++;
             }
         } else {
-            // Si NO tiene examen, siempre va a "En proceso" (incluso sin notas)
             inProgress++;
             if (avg !== null) {
                 totalPromedios += avg;
@@ -360,7 +358,7 @@ function renderStudentCard(student) {
             <div class="grades-info">
                 ${avg !== null ? `
                     <div class="current-grade">
-                        <i class="fas fa-chart-line"></i> Promedio: <strong>${avg.toFixed(2)}</strong>
+                        <i class="fas fa-chart-line"></i> Promedio: <strong>${avg.toFixed(1)}</strong>
                         <span class="${avg >= 3 ? 'grade-badge' : 'grade-badge low'}" style="margin-left:8px;">
                             ${avg >= 3 ? '<i class="fas fa-check"></i> Aprobado' : '<i class="fas fa-rotate"></i> En proceso'}
                         </span>
@@ -403,8 +401,7 @@ function renderStudentModal() {
         <div class="student-header">
             <div class="student-avatar"><i class="fas fa-user-graduate"></i></div>
             <div class="student-details">
-                <h3>${escapeHtml(currentStudentForModal.name)}${currentStudentForModal.seccion ? `<span style="font-size:14px; font-weight:400; color:#8a7055; margin-left:10px;">— Sección
-                     ${escapeHtml(currentStudentForModal.seccion)}</span>` : ''}</h3>
+                <h3>${escapeHtml(currentStudentForModal.name)}${currentStudentForModal.seccion ? `<span style="font-size:14px; font-weight:400; color:#8a7055; margin-left:10px;">— Sección ${escapeHtml(currentStudentForModal.seccion)}</span>` : ''}</h3>
                 <p><i class="fas fa-envelope"></i> ${escapeHtml(currentStudentForModal.email || '')} | <i class="fas fa-graduation-cap"></i> Grado ${currentStudentForModal.grade}</p>
                 <p><i class="fas fa-book"></i> ${escapeHtml(subject?.name || '')} (${subject?.code || ''})</p>
             </div>
@@ -432,7 +429,6 @@ function renderTrimestreContent() {
         ? calcularNotaTrimestral(currentStudentForModal.id, currentSubjectId, currentTrimestre)
         : null;
 
-    // Verificar si ya existe examen trimestral para deshabilitar la opción
     const examenExistente = currentTrimestre !== 'Todas' && myGrades.some(g => 
         g.studentId === currentStudentForModal.id &&
         g.subjectId === currentSubjectId &&
@@ -443,7 +439,7 @@ function renderTrimestreContent() {
     container.innerHTML = `
         ${notaTrimestral !== null ? `
             <div class="period-avg">
-                <i class="fas fa-chart-line"></i> Nota Trimestral: <span>${notaTrimestral.toFixed(2)}</span>
+                <i class="fas fa-chart-line"></i> Nota Trimestral: <span>${notaTrimestral.toFixed(1)}</span>
                 ${notaTrimestral >= 3 ? '<i class="fas fa-trophy"></i> Aprobado' : '<i class="fas fa-rotate"></i> En proceso'}
             </div>
         ` : `
@@ -521,19 +517,18 @@ function renderTrimestreContent() {
         </div>
     `;
 
-    // Resumen del trimestre (solo si hay notas)
     const resumen = generarResumenTrimestre(currentStudentForModal.id, currentSubjectId, currentTrimestre);
     if (resumen && grades.length > 0) {
         container.innerHTML += `
             <div style="margin-top: 20px; border-top: 2px solid var(--parchment); padding-top: 16px;">
                 <h4 style="font-family: 'Cinzel', serif; color: var(--crimson-deep);">Resumen del Trimestre</h4>
                 <table style="width:100%; border-collapse:collapse; max-width:420px; margin:0 auto;">
-                    <tr><td style="padding:6px 0; color:var(--ink-soft);"><strong>Promedio Parciales</strong></td><td style="text-align:right; font-family:'Cinzel',serif; color:var(--crimson);">${resumen.promParciales !== null ? resumen.promParciales.toFixed(2) : 'Sin datos'}</td></tr>
-                    <tr><td style="padding:6px 0; color:var(--ink-soft);"><strong>Promedio Apreciación</strong></td><td style="text-align:right; font-family:'Cinzel',serif; color:var(--crimson);">${resumen.promApreciacion !== null ? resumen.promApreciacion.toFixed(2) : 'Sin datos'}</td></tr>
-                    <tr><td style="padding:6px 0; color:var(--ink-soft);"><strong>Examen Trimestral</strong></td><td style="text-align:right; font-family:'Cinzel',serif; color:var(--crimson);">${resumen.examen !== null ? resumen.examen.toFixed(2) : 'Sin registrar'}</td></tr>
+                    <tr><td style="padding:6px 0; color:var(--ink-soft);"><strong>Promedio Parciales</strong></td><td style="text-align:right; font-family:'Cinzel',serif; color:var(--crimson);">${resumen.promParciales !== null ? resumen.promParciales.toFixed(1) : 'Sin datos'}</td></tr>
+                    <tr><td style="padding:6px 0; color:var(--ink-soft);"><strong>Promedio Apreciación</strong></td><td style="text-align:right; font-family:'Cinzel',serif; color:var(--crimson);">${resumen.promApreciacion !== null ? resumen.promApreciacion.toFixed(1) : 'Sin datos'}</td></tr>
+                    <tr><td style="padding:6px 0; color:var(--ink-soft);"><strong>Examen Trimestral</strong></td><td style="text-align:right; font-family:'Cinzel',serif; color:var(--crimson);">${resumen.examen !== null ? resumen.examen.toFixed(1) : 'Sin registrar'}</td></tr>
                     <tr style="font-weight:bold; border-top:2px solid var(--crimson);">
                         <td style="padding:10px 0; font-family:'Cinzel',serif; color:var(--crimson-deep);">Nota Trimestral</td>
-                        <td style="text-align:right; font-family:'Cinzel',serif; font-size:18px; color:var(--crimson-deep);">${resumen.notaTrimestral !== null ? resumen.notaTrimestral.toFixed(2) : '<span style="color:#8a7055; font-size:14px;">En curso</span>'}</td>
+                        <td style="text-align:right; font-family:'Cinzel',serif; font-size:18px; color:var(--crimson-deep);">${resumen.notaTrimestral !== null ? resumen.notaTrimestral.toFixed(1) : '<span style="color:#8a7055; font-size:14px;">En curso</span>'}</td>
                     </tr>
                 </table>
             </div>
@@ -542,7 +537,6 @@ function renderTrimestreContent() {
 }
 
 function renderGradeHistoryItem(grade) {
-    // Generar nombre por defecto si está vacío
     let nombreDisplay = grade.nombre;
     if (!nombreDisplay || nombreDisplay.trim() === '') {
         const typeLabels = {
@@ -695,7 +689,7 @@ async function deleteGrade(gradeId) {
     }
 }
 
-async function reloadGradesAndRefresh() { //recarga las notas desde el servidor y actualiza la vista
+async function reloadGradesAndRefresh() {
     const gradesRes = await apiFetch('/notas/');
     const gradesJson = await gradesRes.json();
     const allGrades = gradesJson.data ?? gradesJson;
@@ -778,7 +772,7 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
     });
 });
 
-window.addEventListener('click', function (event) {// Cerrar modales al hacer clic fuera de ellos
+window.addEventListener('click', function (event) {
     if (event.target.id === 'studentGradesModal') {
         closeStudentModal();
         return;
