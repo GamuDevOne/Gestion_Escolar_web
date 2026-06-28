@@ -1,0 +1,175 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Cinzel:wght@400;600;700;900&family=EB+Garamond:wght@400;500;600&display=swap');
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+/*
+ * NOTA SOBRE CACHÉ DEL NAVEGADOR:
+ * Si modificas este archivo y los cambios no se ven reflejados en el navegador
+ * (aunque hagas Ctrl+Shift+R), el problema casi siempre es que el navegador
+ * sigue usando una copia cacheada del CSS.
+ *
+ * Solución: en el <link> (del html donde se llame al archivo), agrega o sube el parámetro
+ * de versión, ej: css/ayuda.css?v=2 -> ?v=3
+ * El navegador trata cada valor de "?v=" como una URL distinta, por lo que
+ * se ve obligado a descargar el archivo de nuevo en vez de reutilizar el caché.
+ *
+ * Solo es necesario mientras se está modificando el archivo activamente.
+ * Una vez estable, se puede dejar el número de versión como esté (no afecta
+ * el funcionamiento) o quitarlo sin problema.
+ */
+
+:root {
+    --crimson: #8B0000;
+    --crimson-deep: #5C0000;
+    --gold: #C9A84C;
+    --gold-light: #E2C97E;
+    --gold-pale: #F5E6B8;
+    --ivory: #FAF6EE;
+    --ivory-dark: #F0E8D5;
+    --parchment: #E8DEC6;
+    --ink: #1A0A0A;
+    --ink-soft: #3B1A1A;
+}
+
+body {
+    font-family: 'EB Garamond', Georgia, serif;
+    background: var(--ivory);
+    color: var(--ink);
+}
+
+.ayuda-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+}
+
+.ayuda-header {
+    text-align: center;
+    margin-bottom: 30px;
+    position: relative;
+}
+
+.btn-volver {
+    position: absolute;
+    left: 0;
+    top: 4px;
+    background: transparent;
+    border: 1px solid var(--parchment);
+    border-bottom: 2px solid var(--crimson);
+    padding: 8px 16px;
+    border-radius: 2px;
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--crimson-deep);
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.btn-volver:hover { background: var(--ivory-dark); }
+
+.ayuda-header h1 {
+    font-family: 'Cinzel', serif;
+    font-size: 28px;
+    color: var(--crimson-deep);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.ayuda-header h1 i { color: var(--gold); margin-right: 10px; }
+
+.ayuda-header p {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    color: #8a7055;
+    margin-top: 8px;
+}
+
+.ayuda-search { margin-bottom: 30px; }
+
+.ayuda-search input {
+    width: 100%;
+    padding: 14px 18px;
+    border: 1px solid var(--parchment);
+    border-bottom: 2px solid var(--crimson);
+    border-radius: 2px;
+    font-family: 'EB Garamond', serif;
+    font-size: 15px;
+    background: white;
+    outline: none;
+}
+
+.ayuda-search input:focus { border-bottom-color: var(--gold); }
+
+.ayuda-section { margin-bottom: 28px; }
+
+.ayuda-section-title {
+    font-family: 'Cinzel', serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--crimson-deep);
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--parchment);
+}
+
+.ayuda-section-title i { color: var(--gold); margin-right: 8px; }
+
+.ayuda-item {
+    background: white;
+    border: 1px solid var(--parchment);
+    border-radius: 2px;
+    margin-bottom: 10px;
+    overflow: hidden;
+}
+
+.ayuda-question {
+    padding: 14px 18px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    transition: background 0.2s;
+}
+
+.ayuda-question:hover { background: var(--ivory-dark); }
+
+.ayuda-question i.chevron { color: var(--gold); transition: transform 0.25s; flex-shrink: 0; }
+
+.ayuda-item.open .ayuda-question i.chevron { transform: rotate(180deg); }
+
+.ayuda-answer {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.ayuda-answer-inner {
+    padding: 0 18px 16px;
+    font-family: 'EB Garamond', serif;
+    font-size: 15px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+}
+
+.ayuda-answer strong { color: var(--crimson-deep); }
+
+.ayuda-no-results {
+    text-align: center;
+    padding: 40px;
+    color: #8a7055;
+    font-style: italic;
+    font-family: 'Cormorant Garamond', serif;
+}
+
+@media (max-width: 600px) {
+    .btn-volver { position: static; margin-bottom: 16px; display: inline-block; }
+    .ayuda-header h1 { font-size: 22px; }
+}

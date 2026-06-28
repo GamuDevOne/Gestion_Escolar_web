@@ -1,5 +1,21 @@
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Cinzel:wght@400;600;700;900&family=EB+Garamond:wght@400;500;600&display=swap');
 
+/*
+ * NOTA SOBRE CACHÉ DEL NAVEGADOR:
+ * Si modificas este archivo y los cambios no se ven reflejados en el navegador
+ * (aunque hagas Ctrl+Shift+R), el problema casi siempre es que el navegador
+ * sigue usando una copia cacheada del CSS.
+ *
+ * Solución: en el <link> (del html donde se llame al archivo), agrega o sube el parámetro
+ * de versión, ej: css/ayuda.css?v=2 -> ?v=3
+ * El navegador trata cada valor de "?v=" como una URL distinta, por lo que
+ * se ve obligado a descargar el archivo de nuevo en vez de reutilizar el caché.
+ *
+ * Solo es necesario mientras se está modificando el archivo activamente.
+ * Una vez estable, se puede dejar el número de versión como esté (no afecta
+ * el funcionamiento) o quitarlo sin problema.
+ */
+ 
 * {
     margin: 0;
     padding: 0;
@@ -370,6 +386,24 @@ body {
 }
 
 .btn-edit:hover {
+    background: var(--gold);
+    color: var(--ink);
+}
+
+.btn-reset {
+    background: rgba(201,168,76,0.12);
+    border: 1px solid rgba(201,168,76,0.5);
+    padding: 5px 12px;
+    border-radius: 2px;
+    color: #8B6F00;
+    cursor: pointer;
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    margin: 0 3px;
+    transition: all 0.2s;
+}
+
+.btn-reset:hover {
     background: var(--gold);
     color: var(--ink);
 }
@@ -754,6 +788,18 @@ body {
     text-overflow: ellipsis;
     display: inline-block;
     vertical-align: middle;
+}
+
+.password-display-full { 
+    font-family: 'Courier New', monospace;
+    letter-spacing: 0.08em;
+    font-size: 16px;
+    background: rgba(240,232,213,0.7);
+    border: 1px solid var(--parchment);
+    color: var(--ink-soft);
+    padding: 6px 14px;
+    border-radius: 2px;
+    display: inline-block;
 }
 
 .swal2-container {

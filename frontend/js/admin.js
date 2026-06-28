@@ -1,3 +1,19 @@
+/*
+ * NOTA SOBRE CACHÉ DEL NAVEGADOR:
+ *Si editas el archivo y los cambios no se aplican al recargar la página
+ *(botones que siguen con el comportamiento viejo, lógica que no cambia) y 
+ *ya revisaste que el archivo subido al servidor tiene los cambios, entonces
+ *es probable que el navegador esté usando una copia cacheada del JS.
+ *
+ * Solución: en el <script> que carga el archivo, agrega o sube el parámetro
+ * de versión, ej: js/ayuda.js?v=2 -> ?v=3
+ * Cada valor distinto de "?v=" obliga al navegador a pedir el archivo de
+ * nuevo al servidor en vez de usar el caché.
+ *
+ * Útil mientras se está desarrollando/ajustando el archivo seguido.
+ * Una vez estable, no es necesario seguir subiéndolo.
+ */
+
 // ==================== VERIFICACIÓN DE SESIÓN ====================
 const currentUser = JSON.parse(localStorage.getItem('currentUser'));
 if (!currentUser || currentUser.rol !== 'admin') {
@@ -347,6 +363,7 @@ function renderStudents() {
                     <td>${escapeHtml(s.seccion || '—')}</td>
                     <td>
                         <button class="btn-edit"   onclick="editStudent(${s.id})"><i class="fas fa-edit"></i></button>
+                        <button class="btn-reset"  onclick="resetStudentAccess(${s.id})" title="Restablecer acceso"><i class="fas fa-key"></i></button>
                         <button class="btn-danger" onclick="deleteStudent(${s.id})"><i class="fas fa-trash"></i></button>
                      </td>
                  </tr>
@@ -392,6 +409,45 @@ async function deleteStudent(id) {
         } else {
             const json = await res.json();
             Swal.fire('Error', json.error || 'No se pudo eliminar', 'error');
+        }
+    } catch (error) { Swal.fire('Error', error.message, 'error'); }
+}
+
+async function resetStudentAccess(id) {
+    const s = students.find(s => s.id === id);
+    if (!s) return;
+
+    const result = await Swal.fire({
+        title: '¿Restablecer acceso?',
+        html: `Se generará una nueva contraseña para <strong>${escapeHtml(s.name)}</strong>.<br>Deberá cambiar su contraseña y configurar sus preguntas de seguridad nuevamente.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#8B0000',
+        cancelButtonColor: '#aaa',
+        confirmButtonText: 'Sí, restablecer'
+    });
+    if (!result.isConfirmed) return;
+
+    const newPassword = generatePassword();
+    const payload = {
+        id: s.id, name: s.name, email: s.email, identificacion: s.identificacion,
+        grade: s.grade, seccion: s.seccion, initialPassword: newPassword
+    };
+
+    try {
+        const res = await apiFetch('/estudiantes/', { method: 'PUT', body: JSON.stringify(payload) });
+        if (res.ok) {
+            addActivity(`Restableció acceso de ${s.name}`);
+            await loadStudentsPage();
+            Swal.fire({
+                title: 'Acceso restablecido',
+                html: `Nueva contraseña inicial:<br><span class="password-display-full">${escapeHtml(newPassword)}</span>`,
+                icon: 'success',
+                confirmButtonColor: '#8B0000'
+            });
+        } else {
+            const json = await res.json();
+            Swal.fire('Error', json.error || 'No se pudo restablecer el acceso', 'error');
         }
     } catch (error) { Swal.fire('Error', error.message, 'error'); }
 }
@@ -450,6 +506,7 @@ function renderTeachers() {
                         <td><span class="badge">${teacherSubjects.substring(0, 40)}${teacherSubjects.length > 40 ? '…' : ''}</span></td>
                         <td>
                             <button class="btn-edit"   onclick="editTeacher(${t.id})"><i class="fas fa-edit"></i></button>
+                            <button class="btn-reset"  onclick="resetTeacherAccess(${t.id})" title="Restablecer acceso"><i class="fas fa-key"></i></button>
                             <button class="btn-danger" onclick="deleteTeacher(${t.id})"><i class="fas fa-trash"></i></button>
                          </td>
                      </tr>
@@ -499,6 +556,45 @@ async function deleteTeacher(id) {
         } else {
             const json = await res.json();
             Swal.fire('Error', json.error || 'No se pudo eliminar', 'error');
+        }
+    } catch (error) { Swal.fire('Error', error.message, 'error'); }
+}
+
+async function resetTeacherAccess(id) {
+    const t = teachers.find(t => t.id === id);
+    if (!t) return;
+
+    const result = await Swal.fire({
+        title: '¿Restablecer acceso?',
+        html: `Se generará una nueva contraseña para <strong>${escapeHtml(t.name)}</strong>.<br>Deberá cambiar su contraseña y configurar sus preguntas de seguridad nuevamente.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#8B0000',
+        cancelButtonColor: '#aaa',
+        confirmButtonText: 'Sí, restablecer'
+    });
+    if (!result.isConfirmed) return;
+
+    const newPassword = generatePassword();
+    const payload = {
+        id: t.id, name: t.name, email: t.email, identificacion: t.identificacion,
+        specialty: t.specialty, initialPassword: newPassword
+    };
+
+    try {
+        const res = await apiFetch('/profesores/', { method: 'PUT', body: JSON.stringify(payload) });
+        if (res.ok) {
+            addActivity(`Restableció acceso de ${t.name}`);
+            await loadProfessorsPage();
+            Swal.fire({
+                title: 'Acceso restablecido',
+                html: `Nueva contraseña inicial:<br><span class="password-display-full">${escapeHtml(newPassword)}</span>`,
+                icon: 'success',
+                confirmButtonColor: '#8B0000'
+            });
+        } else {
+            const json = await res.json();
+            Swal.fire('Error', json.error || 'No se pudo restablecer el acceso', 'error');
         }
     } catch (error) { Swal.fire('Error', error.message, 'error'); }
 }
