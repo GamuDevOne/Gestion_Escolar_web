@@ -21,7 +21,7 @@ if (!currentUser || currentUser.rol !== 'admin') {
 }
 
 // ==================== FUNCIONES GLOBALES ====================
-window.closeModal = function(modalId) {
+window.closeModal = function (modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.style.display = 'none';
@@ -30,7 +30,7 @@ window.closeModal = function(modalId) {
     }
 };
 
-window.openModal = function(modalId) {
+window.openModal = function (modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.style.display = 'flex';
@@ -42,7 +42,7 @@ window.openModal = function(modalId) {
 };
 
 // Cerrar modal con ESC
-document.addEventListener('keydown', function(event) {
+document.addEventListener('keydown', function (event) {
     if (event.key === 'Escape') {
         const modals = document.querySelectorAll('.modal');
         modals.forEach(modal => {
@@ -55,7 +55,7 @@ document.addEventListener('keydown', function(event) {
 });
 
 // Cerrar modal si se hace clic fuera del contenido (UN SOLO LISTENER)
-window.addEventListener('click', function(event) {
+window.addEventListener('click', function (event) {
     const modals = document.querySelectorAll('.modal');
     modals.forEach(modal => {
         if (event.target === modal) {
@@ -71,27 +71,27 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==================== ESTADO GLOBAL ====================
-let students    = [];
-let teachers    = [];
-let subjects    = [];
+let students = [];
+let teachers = [];
+let subjects = [];
 let enrollments = [];
-let activities  = [];
+let activities = [];
 
-let currentStudentPage    = 1;
-let currentProfessorPage  = 1;
-let currentSubjectPage    = 1;
+let currentStudentPage = 1;
+let currentProfessorPage = 1;
+let currentSubjectPage = 1;
 let currentEnrollmentPage = 1;
 let perPage = 10;
 let currentActiveView = 'dashboard';
 
-let studentSearch    = '';
-let professorSearch  = '';
-let subjectSearch    = '';
+let studentSearch = '';
+let professorSearch = '';
+let subjectSearch = '';
 let enrollmentSearch = '';
 
-let studentTotal    = 0;
-let professorTotal  = 0;
-let subjectTotal    = 0;
+let studentTotal = 0;
+let professorTotal = 0;
+let subjectTotal = 0;
 let enrollmentTotal = 0;
 
 // ==================== UTILIDADES ====================
@@ -136,7 +136,7 @@ function togglePasswordEdit(inputId) {
 }
 
 async function logout() {
-    try { await apiFetch('/auth/logout.php', { method: 'POST' }); } catch (e) {}
+    try { await apiFetch('/auth/logout.php', { method: 'POST' }); } catch (e) { }
     localStorage.removeItem('currentUser');
     window.location.href = 'index.html';
 }
@@ -150,13 +150,13 @@ async function loadData() {
             apiFetch('/profesores/')
         ]);
 
-        const subjectsJson    = await subjectsRes.json();
+        const subjectsJson = await subjectsRes.json();
         const enrollmentsJson = await enrollmentsRes.json();
-        const teachersJson    = await teachersRes.json();
+        const teachersJson = await teachersRes.json();
 
-        subjects    = subjectsJson.data?.items    ?? subjectsJson.data    ?? subjectsJson;
+        subjects = subjectsJson.data?.items ?? subjectsJson.data ?? subjectsJson;
         enrollments = enrollmentsJson.data?.items ?? enrollmentsJson.data ?? enrollmentsJson;
-        teachers    = teachersJson.data?.items    ?? teachersJson.data    ?? teachersJson;
+        teachers = teachersJson.data?.items ?? teachersJson.data ?? teachersJson;
 
         teachers.forEach(t => { if (!t.subjectIds) t.subjectIds = []; });
 
@@ -182,10 +182,10 @@ async function loadStudentsPage() {
     const params = new URLSearchParams({
         page: currentStudentPage, per_page: perPage, search: studentSearch
     });
-    const res  = await apiFetch(`/estudiantes/?${params}`);
+    const res = await apiFetch(`/estudiantes/?${params}`);
     const json = await res.json();
     const data = json.data ?? json;
-    students     = data.items ?? data;
+    students = data.items ?? data;
     studentTotal = data.total ?? students.length;
     if (currentActiveView === 'students') renderStudents();
     updateStats();
@@ -195,10 +195,10 @@ async function loadProfessorsPage() {
     const params = new URLSearchParams({
         page: currentProfessorPage, per_page: perPage, search: professorSearch
     });
-    const res  = await apiFetch(`/profesores/?${params}`);
+    const res = await apiFetch(`/profesores/?${params}`);
     const json = await res.json();
     const data = json.data ?? json;
-    teachers       = data.items ?? data;
+    teachers = data.items ?? data;
     professorTotal = data.total ?? teachers.length;
     teachers.forEach(t => { if (!t.subjectIds) t.subjectIds = []; });
     if (currentActiveView === 'professors') renderTeachers();
@@ -209,10 +209,10 @@ async function loadSubjectsPage() {
     const params = new URLSearchParams({
         page: currentSubjectPage, per_page: perPage, search: subjectSearch
     });
-    const res  = await apiFetch(`/materias/?${params}`);
+    const res = await apiFetch(`/materias/?${params}`);
     const json = await res.json();
     const data = json.data ?? json;
-    subjects     = data.items ?? data;
+    subjects = data.items ?? data;
     subjectTotal = data.total ?? subjects.length;
     if (currentActiveView === 'subjects') renderSubjects();
     updateStats();
@@ -222,11 +222,11 @@ async function loadEnrollmentsPage() {
     const params = new URLSearchParams({
         page: currentEnrollmentPage, per_page: perPage, search: enrollmentSearch
     });
-    const res  = await apiFetch(`/matriculas/?${params}`);
+    const res = await apiFetch(`/matriculas/?${params}`);
     const json = await res.json();
     const data = json.data ?? json;
-    enrollments      = data.items ?? data;
-    enrollmentTotal  = data.total ?? enrollments.length;
+    enrollments = data.items ?? data;
+    enrollmentTotal = data.total ?? enrollments.length;
     if (currentActiveView === 'enrollments') renderEnrollments();
     updateStats();
 }
@@ -248,9 +248,9 @@ function renderActivities() {
 
 // ==================== ESTADÍSTICAS ====================
 function updateStats() {
-    document.getElementById('totalStudents').innerText    = studentTotal    || students.length;
-    document.getElementById('totalTeachers').innerText    = professorTotal  || teachers.length;
-    document.getElementById('totalSubjects').innerText    = subjectTotal    || subjects.length;
+    document.getElementById('totalStudents').innerText = studentTotal || students.length;
+    document.getElementById('totalTeachers').innerText = professorTotal || teachers.length;
+    document.getElementById('totalSubjects').innerText = subjectTotal || subjects.length;
     document.getElementById('totalEnrollments').innerText = enrollmentTotal || enrollments.length;
 }
 
@@ -260,15 +260,15 @@ function renderServerPagination(paginationId, currentPage, totalPages, total, pe
     if (!paginationDiv) return;
 
     const start = ((currentPage - 1) * perPageVal) + 1;
-    const end   = Math.min(currentPage * perPageVal, total);
+    const end = Math.min(currentPage * perPageVal, total);
 
     paginationDiv.innerHTML = `
         <div class="page-info">Mostrando ${total > 0 ? start : 0}–${end} de ${total}</div>
         <div>
             <select class="per-page-select" onchange="changePerPage('${paginationId}', this.value)">
-                <option value="10"  ${perPageVal === 10  ? 'selected' : ''}>10</option>
-                <option value="25"  ${perPageVal === 25  ? 'selected' : ''}>25</option>
-                <option value="50"  ${perPageVal === 50  ? 'selected' : ''}>50</option>
+                <option value="10"  ${perPageVal === 10 ? 'selected' : ''}>10</option>
+                <option value="25"  ${perPageVal === 25 ? 'selected' : ''}>25</option>
+                <option value="50"  ${perPageVal === 50 ? 'selected' : ''}>50</option>
             </select> por página
         </div>
         <div>
@@ -282,7 +282,7 @@ function renderServerPagination(paginationId, currentPage, totalPages, total, pe
 function changePerPage(paginationId, value) {
     perPage = parseInt(value);
     currentStudentPage = currentProfessorPage = currentSubjectPage = currentEnrollmentPage = 1;
-    
+
     if (currentActiveView === 'students') loadStudentsPage();
     else if (currentActiveView === 'professors') loadProfessorsPage();
     else if (currentActiveView === 'subjects') loadSubjectsPage();
@@ -385,15 +385,15 @@ function openStudentModal() {
 function editStudent(id) {
     const s = students.find(s => s.id === id);
     if (!s) return;
-    document.getElementById('studentId').value             = s.id;
+    document.getElementById('studentId').value = s.id;
     document.getElementById('studentIdentificacion').value = s.identificacion || '';
-    document.getElementById('studentPassword').value       = s.initialPassword || generatePassword();
-    document.getElementById('studentPassword').readOnly    = true;
+    document.getElementById('studentPassword').value = s.initialPassword || generatePassword();
+    document.getElementById('studentPassword').readOnly = true;
     document.getElementById('studentPassword').classList.remove('password-editable');
-    document.getElementById('studentName').value           = s.name;
-    document.getElementById('studentEmail').value          = s.email;
-    document.getElementById('studentGrade').value          = s.grade;
-    document.getElementById('studentSeccion').value        = s.seccion || '';
+    document.getElementById('studentName').value = s.name;
+    document.getElementById('studentEmail').value = s.email;
+    document.getElementById('studentGrade').value = s.grade;
+    document.getElementById('studentSeccion').value = s.seccion || '';
     openModal('studentModal');
 }
 
@@ -454,21 +454,21 @@ async function resetStudentAccess(id) {
 
 document.getElementById('studentForm')?.addEventListener('submit', async function (e) {
     e.preventDefault();
-    const id      = document.getElementById('studentId').value;
+    const id = document.getElementById('studentId').value;
     const password = document.getElementById('studentPassword').value.trim();
-    
+
     if (password.length < 6) {
         Swal.fire('Error', 'La contraseña debe tener al menos 6 caracteres', 'error');
         return;
     }
-    
+
     const student = {
         ...(id ? { id: parseInt(id) } : {}),
-        name:            document.getElementById('studentName').value,
-        email:           document.getElementById('studentEmail').value,
-        identificacion:  document.getElementById('studentIdentificacion').value.trim(),
-        grade:           document.getElementById('studentGrade').value,
-        seccion:         document.getElementById('studentSeccion').value.trim(),
+        name: document.getElementById('studentName').value,
+        email: document.getElementById('studentEmail').value,
+        identificacion: document.getElementById('studentIdentificacion').value.trim(),
+        grade: document.getElementById('studentGrade').value,
+        seccion: document.getElementById('studentSeccion').value.trim(),
         initialPassword: password
     };
     try {
@@ -533,14 +533,14 @@ function editTeacher(id) {
     document.getElementById('professorSubjects').innerHTML = subjects.map(s =>
         `<option value="${s.id}" ${t.subjectIds?.includes(s.id) ? 'selected' : ''}>${s.name}</option>`
     ).join('');
-    document.getElementById('professorId').value             = t.id;
+    document.getElementById('professorId').value = t.id;
     document.getElementById('professorIdentificacion').value = t.identificacion || '';
-    document.getElementById('professorPassword').value       = t.initialPassword || generatePassword();
-    document.getElementById('professorPassword').readOnly    = true;
+    document.getElementById('professorPassword').value = t.initialPassword || generatePassword();
+    document.getElementById('professorPassword').readOnly = true;
     document.getElementById('professorPassword').classList.remove('password-editable');
-    document.getElementById('professorName').value           = t.name;
-    document.getElementById('professorEmail').value          = t.email;
-    document.getElementById('professorSpecialty').value      = t.specialty;
+    document.getElementById('professorName').value = t.name;
+    document.getElementById('professorEmail').value = t.email;
+    document.getElementById('professorSpecialty').value = t.specialty;
     openModal('professorModal');
 }
 
@@ -601,22 +601,22 @@ async function resetTeacherAccess(id) {
 
 document.getElementById('professorForm')?.addEventListener('submit', async function (e) {
     e.preventDefault();
-    const id      = document.getElementById('professorId').value;
+    const id = document.getElementById('professorId').value;
     const password = document.getElementById('professorPassword').value.trim();
-    
+
     if (password.length < 6) {
         Swal.fire('Error', 'La contraseña debe tener al menos 6 caracteres', 'error');
         return;
     }
-    
+
     const teacher = {
         ...(id ? { id: parseInt(id) } : {}),
-        name:            document.getElementById('professorName').value,
-        email:           document.getElementById('professorEmail').value,
-        identificacion:  document.getElementById('professorIdentificacion').value.trim(),
-        specialty:       document.getElementById('professorSpecialty').value,
+        name: document.getElementById('professorName').value,
+        email: document.getElementById('professorEmail').value,
+        identificacion: document.getElementById('professorIdentificacion').value.trim(),
+        specialty: document.getElementById('professorSpecialty').value,
         initialPassword: password,
-        subjectIds:      []
+        subjectIds: []
     };
     try {
         const res = await apiFetch('/profesores/', { method: id ? 'PUT' : 'POST', body: JSON.stringify(teacher) });
@@ -664,7 +664,7 @@ function openSubjectModal() {
         '<option value="">-- Ninguno --</option>' +
         teachers.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
     document.getElementById('subjectForm').reset();
-    document.getElementById('subjectId').value      = '';
+    document.getElementById('subjectId').value = '';
     document.getElementById('subjectCredits').value = 3;
     openModal('subjectModal');
 }
@@ -675,9 +675,9 @@ function editSubject(id) {
     document.getElementById('subjectTeacher').innerHTML =
         '<option value="">-- Ninguno --</option>' +
         teachers.map(t => `<option value="${t.id}" ${t.id === parseInt(s.teacherId) ? 'selected' : ''}>${escapeHtml(t.name)}</option>`).join('');
-    document.getElementById('subjectId').value      = s.id;
-    document.getElementById('subjectCode').value    = s.code;
-    document.getElementById('subjectName').value    = s.name;
+    document.getElementById('subjectId').value = s.id;
+    document.getElementById('subjectCode').value = s.code;
+    document.getElementById('subjectName').value = s.name;
     document.getElementById('subjectCredits').value = s.credits;
     openModal('subjectModal');
 }
@@ -700,13 +700,13 @@ async function deleteSubject(id) {
 
 document.getElementById('subjectForm')?.addEventListener('submit', async function (e) {
     e.preventDefault();
-    const id        = document.getElementById('subjectId').value;
+    const id = document.getElementById('subjectId').value;
     const teacherId = document.getElementById('subjectTeacher').value;
-    const subject   = {
+    const subject = {
         ...(id ? { id: parseInt(id) } : {}),
-        code:      document.getElementById('subjectCode').value,
-        name:      document.getElementById('subjectName').value,
-        credits:   parseInt(document.getElementById('subjectCredits').value),
+        code: document.getElementById('subjectCode').value,
+        name: document.getElementById('subjectName').value,
+        credits: parseInt(document.getElementById('subjectCredits').value),
         teacherId: teacherId ? parseInt(teacherId) : null
     };
     try {
@@ -817,10 +817,10 @@ function openChangePasswordModal() {
     document.getElementById('changePasswordModal').style.display = 'flex';
 }
 
-document.getElementById('changePasswordForm')?.addEventListener('submit', async function(e) {
+document.getElementById('changePasswordForm')?.addEventListener('submit', async function (e) {
     e.preventDefault();
-    const actual    = document.getElementById('cpActual').value;
-    const nueva     = document.getElementById('cpNueva').value;
+    const actual = document.getElementById('cpActual').value;
+    const nueva = document.getElementById('cpNueva').value;
     const confirmar = document.getElementById('cpConfirmar').value;
 
     if (nueva !== confirmar) {
@@ -833,7 +833,7 @@ document.getElementById('changePasswordForm')?.addEventListener('submit', async 
     }
 
     try {
-        const res  = await apiFetch('/auth/cambiar_password.php', {
+        const res = await apiFetch('/auth/cambiar_password.php', {
             method: 'POST',
             body: JSON.stringify({ password_actual: actual, password_nueva: nueva })
         });
@@ -857,7 +857,7 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.addEventListener('click', function () {
         // IMPORTANTE: Si el botón no tiene data-view, ignorar (evita error con botón "Cambiar contraseña")
         if (!this.dataset.view) return;
-        
+
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
         this.classList.add('active');
         const view = this.dataset.view;
@@ -865,8 +865,8 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
         document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
         document.getElementById(`${view}View`).classList.add('active');
         if (view === 'enrollments') loadEnrollmentsPage();
-        if (view === 'students')   loadStudentsPage();
+        if (view === 'students') loadStudentsPage();
         if (view === 'professors') loadProfessorsPage();
-        if (view === 'subjects')   loadSubjectsPage();
+        if (view === 'subjects') loadSubjectsPage();
     });
 });
